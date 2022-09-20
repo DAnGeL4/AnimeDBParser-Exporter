@@ -110,6 +110,7 @@ class RequestsConnections(ac.SiteSettings):
         Gets a web-page through one of the proxies 
         from the corrected proxy list.
         '''
+        response = None
         session = self.get_new_session()
         correct_proxies = self.get_correct_proxies()
 
