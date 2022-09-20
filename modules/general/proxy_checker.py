@@ -83,7 +83,7 @@ class ProxyChecker:
             proxy_list = ''.join(file.readlines()).strip().split("\n")
         
         with multiprocessing.Pool(multiprocessing.cpu_count()) as process:
-            data = process.imap(partial(self.handler, protocol=protocol), proxy_list)
+            data = process.map(partial(self.handler, protocol=protocol), proxy_list)
     
         return data
 
