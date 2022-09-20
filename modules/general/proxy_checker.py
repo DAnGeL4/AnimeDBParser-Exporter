@@ -110,6 +110,7 @@ class ProxyChecker:
         '''
         self._logger.info("Loading correct proxy list...")
 
+        proxy_list = list()
         try:
             with open(file_name) as file:
                 proxy_list = ''.join(file.readlines()).strip().split("\n")
