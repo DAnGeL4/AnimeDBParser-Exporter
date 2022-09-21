@@ -314,7 +314,7 @@ class WebPageParser(ac.WebPageParserAbstract):
                 
         return error_web_pages
 
-    def get_anime_data_in_parallel(self, all_anime_urls: typ.Dict[str, AnyHttpUrl], 
+    def get_anime_data_in_order(self, all_anime_urls: typ.Dict[str, AnyHttpUrl], 
                                    json_data: AnimeByWatchList
                                   ) -> typ.List[typ.Dict[str, AnyHttpUrl]]:
         '''Gets anime data in one stream.'''
@@ -336,7 +336,7 @@ class WebPageParser(ac.WebPageParserAbstract):
             error_web_pages = self.get_anime_data_in_multithreads(
                                     all_anime_urls, json_data)
         else:
-            error_web_pages = self.get_anime_data_in_parallel(
+            error_web_pages = self.get_anime_data_in_order(
                                     all_anime_urls, json_data)
     
         self.log_parser_errors(error_web_pages)
