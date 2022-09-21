@@ -26,7 +26,8 @@ class WebPageService:
     '''
     
     def __init__(self, config_module: ac.SiteSettings, queue=None) -> typ.NoReturn:
-        self._logger = OutputLogger(duplicate=True, queue=queue, 
+        self._queue = queue
+        self._logger = OutputLogger(duplicate=True, queue=self._queue, 
                                     name="web_serv").logger
         self.config_module = config_module
         
@@ -124,10 +125,10 @@ class WebPageService:
         Returns the web-page by passing all the checks.
         '''
         web_page = None
-        req_conn = RequestsConnections(self.config_module)
+        req_conn = RequestsConnections(self.config_module, self._queue)
     
-        if not cfg.RELOAD_WEB_PAGES and \
-                        self.is_exist_web_page_file(type, page_filename):
+        if self.is_exist_web_page_file(
+                type, page_filename) and not cfg.RELOAD_WEB_PAGES:
             web_page = self.load_web_page_file(type, page_filename)
             
         else:
@@ -264,7 +265,7 @@ class WebPageParser(ac.WebPageParserAbstract):
         web_serv = self._web_serv
         if self._queue:
             web_serv = WebPageService(self._config_mod, self._queue)
-            
+
         web_page = web_serv.get_web_page_file(self._type,
                                 page_filename=anime_key, url=anime_url)
         return web_page

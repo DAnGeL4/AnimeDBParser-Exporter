@@ -16,8 +16,9 @@ from modules.general.proxy_checker import ProxyChecker
 class RequestsConnections(ac.SiteSettings):
     '''A class for working with requests connections.'''
 
-    def __init__(self, config_obj: ac.SiteSettings):
-        _redir_out = OutputLogger(duplicate=True)
+    def __init__(self, config_obj: ac.SiteSettings, queue=None):
+        _redir_out = OutputLogger(duplicate=True, queue=queue,
+                                 name="req_con")
         self._logger = _redir_out.logger
         
         self._url_domain = config_obj.url_domain
@@ -116,7 +117,7 @@ class RequestsConnections(ac.SiteSettings):
 
         self._logger.info(f"Correct proxies:\n{correct_proxies}\n")
         
-        for proxy in correct_proxies:    
+        for proxy in correct_proxies:
             session.proxies["http"] = proxy
             session.proxies["https"] = proxy
             
