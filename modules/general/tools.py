@@ -20,9 +20,12 @@ class OutputLogger:
     Logger class to configure the configuration 
     of the logger and convenient work with logs.
     '''
+    #Constant block
+    #----------------------------
     _log_format = "%(asctime)s [%(levelname)s] %(message)s"
     _datefmt = '%y-%m-%d %H:%M'
     _formatter = logging.Formatter(_log_format, datefmt=_datefmt)
+    #----------------------------
     
     def __init__(self, duplicate: bool, queue=None, 
                  name: str="general", level: str="INFO") -> typ.NoReturn:
@@ -194,6 +197,11 @@ class ListenerLogger:
         '''
         @functools.wraps(redirected_function)
         def wrapper(self, *args, **kw):      
+            assert hasattr(self, "set_new_logger"), \
+                   "The self object does not have an attr set_new_logger."
+            assert hasattr(self, "set_default_logger"), \
+                   "The self object does not have an attr set_default_logger."
+            
             self._queue = mp.Manager().Queue(-1)
             self.set_new_logger(True, name="multi_proc_run")
                                               

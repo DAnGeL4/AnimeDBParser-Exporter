@@ -72,6 +72,7 @@ class WatchListTypes(Enum):
     ABANDONE = "abandone"
     FAVORITES = "favorites"
 
+
 class AnimeInfoType(typ.NamedTuple):
     '''
     Anime data type.
@@ -95,5 +96,8 @@ class AnimeInfoType(typ.NamedTuple):
         typ.Literal['finished'],
         typ.Literal['upcoming']
     ]
+
+
+AnimeByWatchList = typ.Dict[WatchListTypes, AnimeInfoType]
 
 #--Finish global constants block

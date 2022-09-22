@@ -12,12 +12,11 @@ from pydantic import AnyHttpUrl
 #Custom imports
 from configs import settings as cfg
 from configs import abstract_classes as ac
-from configs.settings import WatchListTypes, AnimeInfoType, WebPage
+from configs.settings import WatchListTypes, WebPage, AnimeByWatchList
 from modules.general.tools import OutputLogger, ListenerLogger
 from modules.general.requests_connections import RequestsConnections
 #--Finish imports block
 
-AnimeByWatchList = typ.Dict[WatchListTypes, AnimeInfoType]
 
 #--Start functional block
 class WebPageService:
