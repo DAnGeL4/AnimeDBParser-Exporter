@@ -27,7 +27,7 @@ class OutputLogger:
     _formatter = logging.Formatter(_log_format, datefmt=_datefmt)
     #----------------------------
     
-    def __init__(self, duplicate: bool, queue=None, 
+    def __init__(self, duplicate: bool, queue: mp.Queue=None, 
                  name: str="general", level: str="INFO") -> typ.NoReturn:
         self.logger = logging.getLogger(name)
         self.name = self.logger.name
@@ -65,7 +65,7 @@ class OutputLogger:
                 *args: self.logger._log(logging.SUCCESS, message, args))
 
     @classmethod
-    def _get_handlers(cls, duplicate: bool, queue) -> typ.List[logging.Handler]:
+    def _get_handlers(cls, duplicate: bool, queue: mp.Queue) -> typ.List[logging.Handler]:
         '''Checks and returns a list of handlers for logging.'''
         handlers = list([])
         if queue:

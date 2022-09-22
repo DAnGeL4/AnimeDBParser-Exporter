@@ -2,7 +2,7 @@
 #System imports
 import os
 import requests
-import multiprocessing
+import multiprocessing as mp
 from pathlib import Path
 import typing as typ
 from functools import partial
@@ -26,8 +26,10 @@ class ProxyChecker:
     url_to_check = None
     #----------------------------
     
-    def __init__(self):
-        _redir_out = OutputLogger(duplicate=True)
+    def __init__(self, queue: mp.Queue=None):
+        self._queue = queue
+        _redir_out = OutputLogger(duplicate=True, queue=self._queue, 
+                                 name="proxy_chk")
         self._logger = _redir_out.logger
 
     def donload_proxy_lists(self) -> typ.NoReturn:
@@ -82,7 +84,7 @@ class ProxyChecker:
         with open(file) as file:
             proxy_list = ''.join(file.readlines()).strip().split("\n")
         
-        with multiprocessing.Pool(multiprocessing.cpu_count()) as process:
+        with mp.Pool(mp.cpu_count()) as process:
             data = process.map(partial(self.handler, protocol=protocol), proxy_list)
     
         return data

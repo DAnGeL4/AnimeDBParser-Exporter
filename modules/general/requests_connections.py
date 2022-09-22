@@ -4,6 +4,7 @@ import cfscrape
 import requests
 import typing as typ
 from pydantic import AnyUrl, AnyHttpUrl, IPvAnyAddress
+from multiprocessing import Queue
 #Custom imports
 from configs import abstract_classes as ac
 from configs.settings import WebPage, Session, WatchListTypes
@@ -16,8 +17,9 @@ from modules.general.proxy_checker import ProxyChecker
 class RequestsConnections(ac.SiteSettings):
     '''A class for working with requests connections.'''
 
-    def __init__(self, config_obj: ac.SiteSettings, queue=None):
-        _redir_out = OutputLogger(duplicate=True, queue=queue,
+    def __init__(self, config_obj: ac.SiteSettings, queue: Queue=None):
+        self._queue = queue
+        _redir_out = OutputLogger(duplicate=True, queue=self._queue,
                                  name="req_con")
         self._logger = _redir_out.logger
         
@@ -63,7 +65,7 @@ class RequestsConnections(ac.SiteSettings):
         Gets the correct proxy list if it is not loaded.
         '''
         if not self._correct_proxies:
-            pw = ProxyChecker()
+            pw = ProxyChecker(self._queue)
             self._correct_proxies = pw.load_correct_proxies()
 
         return self._correct_proxies

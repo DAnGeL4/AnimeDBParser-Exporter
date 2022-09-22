@@ -24,7 +24,8 @@ class WebPageService:
     Contains auxiliary tools for working with web pages.
     '''
     
-    def __init__(self, config_module: ac.SiteSettings, queue=None) -> typ.NoReturn:
+    def __init__(self, config_module: ac.SiteSettings, 
+                 queue: mp.Queue=None) -> typ.NoReturn:
         self._queue = queue
         self._logger = OutputLogger(duplicate=True, queue=self._queue, 
                                     name="web_serv").logger
