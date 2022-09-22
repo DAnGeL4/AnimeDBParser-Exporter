@@ -66,17 +66,15 @@ Session = cfscrape.CloudflareScraper
 WebPage = Response    
 
 class WatchListTypes(Enum):
+    '''Contains types of watchlists.'''
     WATCH = "watch"
     DESIRED = "desired"
     VIEWED = "viewed"
     ABANDONE = "abandone"
     FAVORITES = "favorites"
 
-
 class AnimeInfoType(typ.NamedTuple):
-    '''
-    Anime data type.
-    '''
+    '''Anime data type.'''
     poster: AnyHttpUrl
     name: str
     original_name: str
@@ -96,7 +94,6 @@ class AnimeInfoType(typ.NamedTuple):
         typ.Literal['finished'],
         typ.Literal['upcoming']
     ]
-
 
 AnimeByWatchList = typ.Dict[WatchListTypes, AnimeInfoType]
 
