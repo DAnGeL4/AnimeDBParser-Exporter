@@ -248,7 +248,7 @@ class WebPageParser(ac.WebPageParserAbstract):
         for error_page in error_web_pages:
             if error_page is None: continue
             key, url = list(error_page.items())[0]
-            self._logger.critical(f"Aborted:\n* Page key: {key};\n* Page URL: {url}")
+            self._logger.critical(f"Aborted:\n* Page key: {key};\n* Page URL: {url}\n")
 
     def _if_update_needed(self, anime_key: str, json_data: AnimeByWatchList
                                ) -> typ.Union[None, WebPageService]:
@@ -256,7 +256,7 @@ class WebPageParser(ac.WebPageParserAbstract):
         if anime_key in json_data[self._type.value]:
             self._logger.info("...record already exists...")
             if not cfg.UPDATE_JSON_DUMPS:
-                self._logger.warning("...canceled. Updates are not needed.\n")
+                self._logger.info("...canceled. Updates are not needed.\n")
                 return False
         return True
 

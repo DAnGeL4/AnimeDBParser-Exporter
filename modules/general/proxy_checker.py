@@ -61,11 +61,11 @@ class ProxyChecker:
             response = requests.get(self.url_to_check, 
                                     proxies=proxies, 
                                     timeout=2)
-            self._logger.info(f"Valid proxy: {protocol}://{proxy}")
+            self._logger.info(f"Live proxy: {protocol}://{proxy}")
             self._logger.info(f"Response: {response}")
             
             if response.status_code == 200:
-                self._logger.success("Correct proxy.\n")
+                self._logger.success("Valid proxy.\n")
                 return f"{protocol}://{proxy}"
     
         except:
