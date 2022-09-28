@@ -1,6 +1,7 @@
 #--Start imports block
 #System imports
 import os
+from bs4 import BeautifulSoup
 #Custom imports
 from configs import settings as cfg
 from configs import abstract_classes as ac
@@ -11,7 +12,7 @@ from configs import abstract_classes as ac
 class AnimeBuffRuConfig(ac.SiteSettings):
     '''Configuration for site animebuff.ru.'''
 
-    _user_num = os.environ['animebuff_user_num']
+    user_num = None#os.environ['animebuff_user_num']
     _login = os.environ['animebuff_login']
     _password = os.environ['animebuff_pwd']
     payload = {'username': _login, 'password': _password}
@@ -22,7 +23,7 @@ class AnimeBuffRuConfig(ac.SiteSettings):
     url_domain = "animebuff.ru"
     url_general = "https://animebuff.ru"
     url_login = "https://animebuff.ru/login"
-    url_wath_lists = f"https://animebuff.ru/users/{_user_num}/watchlist"
+    url_wath_lists = f"{url_general}/users/{user_num}/watchlist"
     url_type_option = "?type="
     
     url_types = {
@@ -49,8 +50,8 @@ class AnimeBuffRuConfig(ac.SiteSettings):
         #"Alt-Used": "animebuff.ru",
         #"Cache-Control": "max-age=0",
         #"Connection": "keep-alive",
-        #"Cookie": "XSRF-TOKEN=" + os.environ['XSRF-TOKEN-VALUE'] + 
-        #            "; animebuff_session="+ os.environ['animebuff_session_value'],
+        "Cookie": "XSRF-TOKEN=" + os.environ['XSRF-TOKEN-VALUE'] + 
+                    "; animebuff_session="+ os.environ['animebuff_session_value'],
         #"DNT": "1",
         #"Host": "animebuff.ru",
         #"Referer": "https://animebuff.ru/users/4718",
@@ -62,4 +63,28 @@ class AnimeBuffRuConfig(ac.SiteSettings):
         #"Upgrade-Insecure-Requests": "1",
         "User-agent": "Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
+
+    @classmethod
+    def make_preparing(cls, web_page: cfg.WebPage) -> bool:
+        '''
+        Performs the initial preparation of the configuration module.
+        Gets a profile identifier and corrects watchlists url.
+        '''
+        try:
+            soup = BeautifulSoup(web_page, 'lxml')
+            
+            user_dropdown = soup.find(class_="dropdown-content")
+            profile_tag = "Профиль"
+            item_profile = user_dropdown.find('a', string=profile_tag)
+            profile_url = item_profile.get("href")
+            user_num = profile_url.split('/')[-1]
+    
+            cls.user_num = user_num
+            cls.url_wath_lists = f"{cls.url_general}/users/{user_num}/watchlist"
+            
+        except:
+            return False
+        else:
+            return True
+
 #--Finish global constants block

@@ -29,7 +29,11 @@ class SiteSettings:
     
     cookies = dict()
     headers = dict()
-
+    
+    @classmethod
+    def make_preparing(cls, web_page):
+        '''Performs the initial preparation of the configuration module.'''
+        pass
     
 class WebPageParserAbstract:
     '''

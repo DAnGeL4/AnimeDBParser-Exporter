@@ -10,6 +10,9 @@ from pydantic import AnyHttpUrl
 
 
 #--Start global constants block
+
+# Flags
+
 DOWNLOAD_PROXY_LISTS = bool(    False
                                 #True
 )
@@ -28,6 +31,14 @@ UPDATE_JSON_DUMPS = bool(       False
 USE_MULTITHREADS = bool(        #False
                                 True
 )
+ENABLE_PARSING_MODULE = bool(   #False
+                                True
+)
+ENABLE_EXPORTER_MODULE = bool(  #False
+                                True
+)
+
+# Web Protocols
 
 PROXY_PROTOCOLS = dict({
     "socks4": "socks4",
@@ -37,6 +48,8 @@ REQUEST_PROXIES_FORMAT = {
     "http": None,            #used socks proxy
     "https": None            #used socks proxy
 }
+
+# Files and Directories
 
 ROOT_DIRECTORY = os.getcwd()
 CONFIG_DIR = os.path.join(ROOT_DIRECTORY, "configs/")
@@ -53,6 +66,9 @@ LOCAL_PROXY_FILES = dict({
     PROXY_PROTOCOLS["socks4"]: "proxy_socks4",
     PROXY_PROTOCOLS["socks5"]: "proxy_socks5",
 })
+
+# Online Files
+
 ONLINE_PROXY_LISTS = dict({
     LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks4"]]: 
         "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt",
@@ -60,7 +76,8 @@ ONLINE_PROXY_LISTS = dict({
         "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
 })
 
-#Types
+# Types
+
 Response = requests.models.Response
 Session = cfscrape.CloudflareScraper
 WebPage = Response    

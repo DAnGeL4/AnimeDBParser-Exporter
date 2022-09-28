@@ -117,6 +117,24 @@ class WebPageService:
             return False
             
         return True
+
+    def get_preparing(self) -> bool:
+        '''
+        Performs the starting preparation of the configuration module.
+        '''
+        web_page = None
+        req_conn = RequestsConnections(self.config_module, self._queue)
+        
+        self._logger.info("Preparing the configuration module...")
+        
+        web_page = req_conn.get_web_page(type, self.config_module.url_general)
+        res = self.config_module.make_preparing(web_page)
+        
+        if not res:
+            self._logger.critical("...preparing failed.")
+        else:
+            self._logger.success("...preparing done.")
+        return res
     
     def get_web_page_file(self, type: WatchListTypes, 
                           page_filename: str=None, 
@@ -210,7 +228,9 @@ class WebPageParser(ac.WebPageParserAbstract):
         self._type = type
         self._mg_url = self._config_mod.url_general
         self._module_name = module.module_name
-        self._json_dump_name = module.json_dump_name
+                         
+        json_file_name = self._config_mod.user_num + "_" + module.json_dump_name
+        self._json_dump_name = self._module_name + "/" + json_file_name
                          
         self._parser_mod.__init__(self, self._mg_url)
         self._queue = None

@@ -5,10 +5,11 @@ import typing as typ
 #Custom imports
 from configs import abstract_classes as ac
 from configs.settings import WatchListTypes
+from configs.settings import ENABLE_PARSING_MODULE, ENABLE_EXPORTER_MODULE
 from configs.connected_modules import EnabledParserModules
 from modules.general.tools import OutputLogger
 from modules.general.proxy_checker import ProxyChecker
-from modules.general.web_page_tools import WebPageParser
+from modules.general.web_page_tools import WebPageService, WebPageParser
 #--Finish imports block
 
 
@@ -39,6 +40,9 @@ def parse_selected_module(module: ac.ConnectedParserModuleType) -> typ.NoReturn:
     ''''''    
     prx_chk = ProxyChecker()
     prx_chk.prepare_proxy_lists(module.config_module.url_general)
+
+    web_serv = WebPageService(module.config_module)
+    if not web_serv.get_preparing(): return
     
     for type in WatchListTypes:
         page_parser = WebPageParser(module, type)
@@ -59,8 +63,11 @@ def parse_all_modules(module: ac.ConnectedParserModuleType=None) -> typ.NoReturn
 @basic_output
 def main() -> typ.NoReturn:
     '''Entry point.'''
-    
-    _ = parse_all_modules()
+
+    if ENABLE_PARSING_MODULE:
+        _ = parse_all_modules()
+    if ENABLE_EXPORTER_MODULE:
+        pass
     
     return
         
