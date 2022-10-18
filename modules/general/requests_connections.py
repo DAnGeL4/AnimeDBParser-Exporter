@@ -5,6 +5,7 @@ import requests
 import typing as typ
 from pydantic import AnyUrl, AnyHttpUrl, IPvAnyAddress
 from multiprocessing import Queue
+from requests.cookies import RequestsCookieJar
 #Custom imports
 from configs import abstract_classes as ac
 from configs.settings import WebPage, Session, WatchListTypes
@@ -17,7 +18,8 @@ from modules.general.proxy_checker import ProxyChecker
 class RequestsConnections(ac.SiteSettings):
     '''A class for working with requests connections.'''
 
-    def __init__(self, config_obj: ac.SiteSettings, queue: Queue=None):
+    def __init__(self, module_name: str, config_obj: ac.SiteSettings, queue: Queue=None):
+        self._module_name = module_name
         self._queue = queue
         _redir_out = OutputLogger(duplicate=True, queue=self._queue,
                                  name="req_con")
@@ -45,19 +47,13 @@ class RequestsConnections(ac.SiteSettings):
         session.headers = self._headers
         if self._use_proxy:
             session.proxies = self._proxies
-    
-        for name, value in self.cookies.items():
-            required_args = {
-                'name': name,
-                'value': value
-            }
-            optional_args = {
-                'domain': self._url_domain
-            }
-            
-            new_cookie = requests.cookies.create_cookie(**required_args, **optional_args)
-            session.cookies.set_cookie(new_cookie)
-        
+
+        cookies_jar = RequestsCookieJar()
+        for key, value in self._cookies.items():
+            cookie = requests.cookies.create_cookie(key, value)
+            cookies_jar.set_cookie(cookie)
+
+        session.cookies = cookies_jar
         return cfscrape.create_scraper(sess=session)
 
     def get_correct_proxies(self) -> typ.List[AnyUrl]:
@@ -65,7 +61,7 @@ class RequestsConnections(ac.SiteSettings):
         Gets the correct proxy list if it is not loaded.
         '''
         if not self._correct_proxies:
-            pw = ProxyChecker(self._queue)
+            pw = ProxyChecker(self._module_name, self._queue)
             self._correct_proxies = pw.load_correct_proxies()
 
         return self._correct_proxies
