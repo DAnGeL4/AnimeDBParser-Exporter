@@ -92,7 +92,6 @@ class WebPageParser(WebPageParserAbstract):
         item_poster = item.find(class_='anime__poster-img')
         cut_poster_url = item_poster.find('img').get('src')
         anime_poster_url = self._url_general + cut_poster_url
-        #print(f'* Poster url: \n{anime_poster_url}')
 
         return anime_poster_url
 
@@ -102,7 +101,6 @@ class WebPageParser(WebPageParserAbstract):
         '''
         item_title = item.find(class_="anime__title")
         anime_name = item_title.text.strip()
-        #print(f'* Name: \n{anime_name}')
 
         return anime_name
 
@@ -116,7 +114,6 @@ class WebPageParser(WebPageParserAbstract):
         if child_item: child_item.decompose()
         
         anime_original_name = item_other_name.text.strip()
-        #print(f'* Original name: \n{anime_original_name}')
 
         return anime_original_name
 
@@ -127,7 +124,6 @@ class WebPageParser(WebPageParserAbstract):
         type_href = item.find("a").get("href")
         anime_type = type_href.split('/')[-1]
         anime_type = 'film' if anime_type == 'polnometrazhnyi-film' else anime_type
-        #print(f'* Type: \n{anime_type}')
 
         return anime_type
 
@@ -148,7 +144,6 @@ class WebPageParser(WebPageParserAbstract):
             anime_ep_count = int(ep_full)
         except:
             anime_ep_count = int(ep_now)
-        #print(f'* Ep count: \n{anime_ep_count}')
 
         return anime_ep_count
 
@@ -159,7 +154,6 @@ class WebPageParser(WebPageParserAbstract):
         item_status = item[0]
         status_href = item_status.get('href')
         anime_status = status_href.split('/')[-1]
-        #print(f'* Status: \n{anime_status}')
         
         return anime_status
 
@@ -170,7 +164,6 @@ class WebPageParser(WebPageParserAbstract):
         item_year = item[-1]
         year_href = item_year.get('href')
         anime_year = year_href.split('/')[-1]
-        #print(f'* Year: \n{anime_year}')
         
         return anime_year
 
@@ -188,7 +181,6 @@ class WebPageParser(WebPageParserAbstract):
         for name in anime_other_names:
             index = anime_other_names.index(name)
             anime_other_names[index] = name.strip()
-        #print(f'* Other names: \n{anime_other_names}')
 
         return anime_other_names
         
