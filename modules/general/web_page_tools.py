@@ -24,8 +24,9 @@ class WebPageService:
     Contains auxiliary tools for working with web pages.
     '''
     
-    def __init__(self, config_module: ac.SiteSettings, 
+    def __init__(self, module_name: str, config_module: ac.SiteSettings, 
                  queue: mp.Queue=None) -> typ.NoReturn:
+        self._module_name = module_name
         self._queue = queue
         self._logger = OutputLogger(duplicate=True, queue=self._queue, 
                                     name="web_serv").logger
@@ -123,7 +124,8 @@ class WebPageService:
         Performs the starting preparation of the configuration module.
         '''
         web_page = None
-        req_conn = RequestsConnections(self.config_module, self._queue)
+        req_conn = RequestsConnections(self._module_name, 
+                                       self.config_module, self._queue)
         
         self._logger.info("Preparing the configuration module...")
         
@@ -143,7 +145,8 @@ class WebPageService:
         Returns the web-page by passing all the checks.
         '''
         web_page = None
-        req_conn = RequestsConnections(self.config_module, self._queue)
+        req_conn = RequestsConnections(self._module_name, 
+                                       self.config_module, self._queue)
     
         if self.is_exist_web_page_file(
                 type, page_filename) and not cfg.RELOAD_WEB_PAGES:
@@ -223,11 +226,11 @@ class WebPageParser(ac.WebPageParserAbstract):
         self._module = module
         self._config_mod = module.config_module
         self._parser_mod = module.parser_module
-        self._web_serv = WebPageService(self._config_mod)
                          
         self._type = type
         self._mg_url = self._config_mod.url_general
         self._module_name = module.module_name
+        self._web_serv = WebPageService(self._module_name, self._config_mod)
                          
         json_file_name = self._config_mod.user_num + "_" + module.json_dump_name
         self._json_dump_name = self._module_name + "/" + json_file_name
@@ -284,7 +287,8 @@ class WebPageParser(ac.WebPageParserAbstract):
         '''Uses the queue for logging, if necessary, and returns web_page.'''
         web_serv = self._web_serv
         if self._queue:
-            web_serv = WebPageService(self._config_mod, self._queue)
+            web_serv = WebPageService(self._module_name, 
+                                      self._config_mod, self._queue)
 
         web_page = web_serv.get_web_page_file(self._type,
                                 page_filename=anime_key, url=anime_url)

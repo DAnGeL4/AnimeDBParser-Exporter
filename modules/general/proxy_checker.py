@@ -20,14 +20,21 @@ class ProxyChecker:
     '''
     #Constant block
     #----------------------------
-    local_proxy_files = cfg.LOCAL_PROXY_FILES
-    online_proxy_lists = cfg.ONLINE_PROXY_LISTS 
-    proxies = cfg.REQUEST_PROXIES_FORMAT
-    url_to_check = None
+    local_proxy_files: Path = cfg.LOCAL_PROXY_FILES
+    online_proxy_lists: Path = cfg.ONLINE_PROXY_LISTS 
+    proxies: typ.Dict[str, IPvAnyAddress] = cfg.REQUEST_PROXIES_FORMAT
+    url_to_check: AnyUrl = None
+    _module_name: str = None
+    _correct_proxy_filename: Path = None
     #----------------------------
     
-    def __init__(self, queue: mp.Queue=None):
+    def __init__(self, module_name: str, queue: mp.Queue=None):
+        self._module_name = module_name
         self._queue = queue
+
+        filename = f"{self._module_name}_correct_proxies"
+        self._correct_proxy_filename = os.path.join(cfg.PROXY_LISTS_DIR, filename)
+        
         _redir_out = OutputLogger(duplicate=True, queue=self._queue, 
                                  name="proxy_chk")
         self._logger = _redir_out.logger
@@ -95,10 +102,10 @@ class ProxyChecker:
         '''
         self._logger.info("Writing correct proxy list...")
         
-        write_filename = cfg.CORRECT_PROXIES_FILE
+        #write_filename = f"{self._module_name}_{cfg.CORRECT_PROXIES_FILE}"
 
         try:
-            with open(write_filename, 'w') as file:
+            with open(self._correct_proxy_filename, 'w') as file:
                 file.write('\n'.join(correct_proxies))
             self._logger.success("...writed.\n")
         except:
@@ -111,10 +118,11 @@ class ProxyChecker:
         Reads a proxy list from the file.
         '''
         self._logger.info("Loading correct proxy list...")
+        #file_name = f"{self._module_name}_{cfg.CORRECT_PROXIES_FILE}"
 
         proxy_list = list()
         try:
-            with open(file_name) as file:
+            with open(self._correct_proxy_filename) as file:
                 proxy_list = ''.join(file.readlines()).strip().split("\n")
             self._logger.success("...loaded.\n")
         except:
@@ -143,7 +151,7 @@ class ProxyChecker:
         _ = self.write_correct_proxies(correct_proxies)
         return correct_proxies
 
-    def prepare_proxy_lists(self, url_general) -> typ.NoReturn:
+    def prepare_proxy_lists(self, url_general: AnyUrl) -> typ.NoReturn:
         '''
         Prepairs proxy lists for work.
         '''
