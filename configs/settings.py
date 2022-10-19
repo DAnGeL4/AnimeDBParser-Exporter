@@ -100,27 +100,31 @@ class WatchListTypes(Enum):
     ABANDONE = "abandone"
     FAVORITES = "favorites"
 
+class AnimeTypes(Enum):
+    '''Types of anime.'''
+    TV = 'tv-serial'
+    OVA = 'ova'
+    MOVIE = 'film'
+    SPECIAL = 'special'
+    ONA = 'ona'
+    CLIP = 'clip'
+
+class AnimeStatuses(Enum):
+    '''Types of anime statuses.'''
+    AIRING = 'airing'
+    FINISHED = 'finished'
+    UPCOMING = 'upcoming'
+
 class AnimeInfoType(typ.NamedTuple):
     '''Anime data type.'''
     poster: AnyHttpUrl
     name: str
     original_name: str
     other_names: typ.List[str]
-    type: typ.Union[ 
-        typ.Literal['tv-serial'],
-        typ.Literal['ova'],
-        typ.Literal['film'],
-        typ.Literal['special'],
-        typ.Literal['ona'],
-        typ.Literal['clip']
-    ]
+    type: AnimeTypes
     ep_count: typ.Union[int, None]
     year: int
-    status: typ.Union[ 
-        typ.Literal['airing'],
-        typ.Literal['finished'],
-        typ.Literal['upcoming']
-    ]
+    status: AnimeStatuses
 
 AnimeByWatchList = typ.Dict[WatchListTypes, AnimeInfoType]
 
