@@ -129,7 +129,8 @@ class WebPageService:
         
         self._logger.info("Preparing the configuration module...")
         
-        web_page = req_conn.get_web_page(type, self.config_module.url_general)
+        web_page = req_conn.get_web_page(type, self.config_module.url_general, 
+                                        RequestMethods.GET)
         res = self.config_module.make_preparing(web_page)
         
         if not res:
