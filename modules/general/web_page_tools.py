@@ -12,7 +12,7 @@ from pydantic import AnyHttpUrl
 #Custom imports
 from configs import settings as cfg
 from configs import abstract_classes as ac
-from configs.settings import WatchListTypes, WebPage, AnimeByWatchList
+from configs.settings import WatchListTypes, WebPage, AnimeByWatchList, RequestMethods
 from modules.general.tools import OutputLogger, ListenerLogger
 from modules.general.requests_connections import RequestsConnections
 #--Finish imports block
@@ -140,7 +140,9 @@ class WebPageService:
     
     def get_web_page_file(self, type: WatchListTypes, 
                           page_filename: str=None, 
-                          url: AnyHttpUrl=None) -> cfg.WebPage:
+                          url: AnyHttpUrl=None, 
+                          method: RequestMethods=RequestMethods.GET,
+                          save_page: bool=True) -> cfg.WebPage:
         '''
         Returns the web-page by passing all the checks.
         '''
@@ -153,9 +155,9 @@ class WebPageService:
             web_page = self.load_web_page_file(type, page_filename)
             
         else:
-            web_page = req_conn.get_web_page(type, url)
+            web_page = req_conn.get_web_page(type, url, method)
             
-            if web_page:
+            if web_page and save_page:
                 _ = self.save_web_page(type, page_filename, web_page)
     
         return web_page

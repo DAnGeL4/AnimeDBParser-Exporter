@@ -8,7 +8,7 @@ from multiprocessing import Queue
 from requests.cookies import RequestsCookieJar
 #Custom imports
 from configs import abstract_classes as ac
-from configs.settings import WebPage, Session, WatchListTypes
+from configs.settings import WebPage, Session, WatchListTypes, RequestMethods
 from modules.general.tools import OutputLogger
 from modules.general.proxy_checker import ProxyChecker
 #--Finish imports block
@@ -82,15 +82,35 @@ class RequestsConnections(ac.SiteSettings):
         self._logger.info("-----")
         self._logger.error("Couldn't get a web page!")
         self._logger.critical("...ABORTED!\n")
+
+    def _get_request_method(self, session: Session, 
+                            method: RequestMethods) -> typ.Callable:
+        '''
+        Selects the desired method of sending a request.
+        '''
+        request_method = None
+        if method is RequestMethods.GET:
+            request_method = session.get
+        elif method is RequestMethods.POST:
+            request_method = session.post
+        else:
+            self._logger.error("Unknown http method.")
+            return None
+            
+        return request_method
         
     def _get_response(self, url: AnyHttpUrl, session: Session, 
+                      method: RequestMethods,
                       proxy: IPvAnyAddress=None) -> typ.Union[WebPage, None]:
         '''
-        Tries to get an answer. Returns None if the status code is not 200.
+        Tries to get an answer. Sends an empty request. 
+        Returns None if the status code is not 200. 
         '''
         response = None
         try:
-            response = session.get(url, timeout=2)
+            request_method = self._get_request_method(session, method)
+            response = request_method(url, timeout=2)
+            
             if response.status_code == 200:
                 self._logger.success(self._add_arg_to_msg("Correct response!", proxy))
                 self._logger.info(f"Response: {response}\n")
@@ -104,7 +124,8 @@ class RequestsConnections(ac.SiteSettings):
             
         return response
 
-    def _get_web_page_with_proxy(self, url: AnyHttpUrl) -> typ.Union[WebPage, None]:
+    def _get_web_page_with_proxy(self, url: AnyHttpUrl, 
+                                 method: RequestMethods) -> typ.Union[WebPage, None]:
         '''
         Gets a web-page through one of the proxies 
         from the corrected proxy list.
@@ -119,7 +140,7 @@ class RequestsConnections(ac.SiteSettings):
             session.proxies["http"] = proxy
             session.proxies["https"] = proxy
             
-            response = self._get_response(url, session, proxy)
+            response = self._get_response(url, session, method, proxy)
             if response: break
 
         if not response: 
@@ -128,20 +149,22 @@ class RequestsConnections(ac.SiteSettings):
                 
         return response.text
 
-    def _get_web_page_without_proxy(self, url: AnyHttpUrl) -> typ.Union[WebPage, None]:
+    def _get_web_page_without_proxy(self, url: AnyHttpUrl, 
+                                    method: RequestMethods) -> typ.Union[WebPage, None]:
         '''
         Gets a web-page without using a requests proxy.
         '''
         session = self.get_new_session()
         
-        response = self._get_response(url, session)
+        response = self._get_response(url, session, method)
         if not response: 
             self._print_error_msg()
             return None
                 
         return response.text
 
-    def get_web_page(self, type: WatchListTypes, url: AnyHttpUrl) -> typ.Union[WebPage, None]: 
+    def get_web_page(self, type: WatchListTypes, url: AnyHttpUrl, 
+                     method: RequestMethods) -> typ.Union[WebPage, None]: 
         '''
         Gets a web-page by parameters.
         '''
@@ -152,9 +175,9 @@ class RequestsConnections(ac.SiteSettings):
         self._logger.info(f"Using proxy: {self._use_proxy}")
         
         if self._use_proxy:
-            web_page = self._get_web_page_with_proxy(url)
+            web_page = self._get_web_page_with_proxy(url, method)
         else:
-            web_page = self._get_web_page_without_proxy(url)
+            web_page = self._get_web_page_without_proxy(url, method)
         return web_page
 
 #--Finish functional block
