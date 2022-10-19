@@ -31,11 +31,11 @@ UPDATE_JSON_DUMPS = bool(       False
 USE_MULTITHREADS = bool(        #False
                                 True
 )
-ENABLE_PARSING_MODULE = bool(   #False
+ENABLE_PARSING_MODULES = bool(  #False
                                 True
 )
-ENABLE_EXPORTER_MODULE = bool(  #False
-                                True
+ENABLE_EXPORTER_MODULES = bool( False
+                                #True
 )
 
 # Web Protocols
@@ -81,6 +81,16 @@ ONLINE_PROXY_LISTS = dict({
 Response = requests.models.Response
 Session = cfscrape.CloudflareScraper
 WebPage = Response    
+
+class RequestMethods(Enum):
+    '''Contains types of HTTP requesting methods.'''
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+    HEAD = "HEAD"
+    PATCH = "PATCH"
+    OPTIONS = "OPTIONS"
 
 class WatchListTypes(Enum):
     '''Contains types of watchlists.'''
