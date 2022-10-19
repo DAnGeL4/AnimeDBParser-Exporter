@@ -101,8 +101,6 @@ class ProxyChecker:
         Writes a checked list of valid proxy to the file.
         '''
         self._logger.info("Writing correct proxy list...")
-        
-        #write_filename = f"{self._module_name}_{cfg.CORRECT_PROXIES_FILE}"
 
         try:
             with open(self._correct_proxy_filename, 'w') as file:
@@ -118,7 +116,6 @@ class ProxyChecker:
         Reads a proxy list from the file.
         '''
         self._logger.info("Loading correct proxy list...")
-        #file_name = f"{self._module_name}_{cfg.CORRECT_PROXIES_FILE}"
 
         proxy_list = list()
         try:
