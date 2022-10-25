@@ -3,8 +3,9 @@
 import os
 import requests
 import cfscrape
-from enum import Enum
 import typing as typ
+from enum import Enum
+from dataclasses import dataclass
 from pydantic import AnyHttpUrl
 #--Finish imports block
 
@@ -34,8 +35,8 @@ USE_MULTITHREADS = bool(        #False
 ENABLE_PARSING_MODULES = bool(  #False
                                 True
 )
-ENABLE_EXPORTER_MODULES = bool( False
-                                #True
+ENABLE_EXPORTER_MODULES = bool( #False
+                                True
 )
 
 # Web Protocols
@@ -92,6 +93,7 @@ class RequestMethods(Enum):
     PATCH = "PATCH"
     OPTIONS = "OPTIONS"
 
+
 class WatchListTypes(Enum):
     '''Contains types of watchlists.'''
     WATCH = "watch"
@@ -99,6 +101,9 @@ class WatchListTypes(Enum):
     VIEWED = "viewed"
     ABANDONE = "abandone"
     FAVORITES = "favorites"
+    DELAYED = "delayed"
+    REVIEWED = "reviewed"
+
 
 class AnimeTypes(Enum):
     '''Types of anime.'''
@@ -109,13 +114,16 @@ class AnimeTypes(Enum):
     ONA = 'ona'
     CLIP = 'clip'
 
+
 class AnimeStatuses(Enum):
     '''Types of anime statuses.'''
     AIRING = 'airing'
     FINISHED = 'finished'
     UPCOMING = 'upcoming'
 
-class AnimeInfoType(typ.NamedTuple):
+    
+@dataclass
+class AnimeInfoType:
     '''Anime data type.'''
     poster: AnyHttpUrl
     name: str
@@ -125,6 +133,13 @@ class AnimeInfoType(typ.NamedTuple):
     ep_count: typ.Union[int, None]
     year: int
     status: AnimeStatuses
+
+
+@dataclass
+class LinkedAnimeInfoType(AnimeInfoType):
+    '''Anime data type with a link.'''
+    link: AnyHttpUrl
+
 
 AnimeByWatchList = typ.Dict[WatchListTypes, AnimeInfoType]
 
