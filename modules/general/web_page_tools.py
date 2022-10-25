@@ -224,7 +224,7 @@ class WebPageParser(ac.WebPageParserAbstract):
     for a module of a certain site.
     '''
 
-    def __init__(self, module: ac.ConnectedParserModuleType, 
+    def __init__(self, module: ac.ConnectedModuleType, 
                      type: WatchListTypes) -> typ.NoReturn:
         self._module = module
         self._config_mod = module.config_module

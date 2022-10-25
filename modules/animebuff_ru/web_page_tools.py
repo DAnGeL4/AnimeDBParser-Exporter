@@ -4,7 +4,7 @@ import typing as typ
 from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 #Custom imports
-from configs.settings import AnimeInfoType, WebPage
+from configs.settings import AnimeInfoType, WebPage, AnimeTypes, AnimeStatuses
 from configs.abstract_classes import WebPageParserAbstract
 from modules.general.tools import OutputLogger
 #--Finish imports block
@@ -85,7 +85,7 @@ class WebPageParser(WebPageParserAbstract):
         return item
         
 
-    def _get_anime_poster(self, item: BeautifulSoup) -> AnimeInfoType.poster:
+    def _get_anime_poster(self, item: BeautifulSoup) -> AnyHttpUrl:
         '''
         Parses anime poster from the item.
         '''
@@ -95,7 +95,7 @@ class WebPageParser(WebPageParserAbstract):
 
         return anime_poster_url
 
-    def _get_anime_name(self, item: BeautifulSoup) -> AnimeInfoType.name:
+    def _get_anime_name(self, item: BeautifulSoup) -> str:
         '''
         Parses anime name from the item.
         '''
@@ -104,7 +104,7 @@ class WebPageParser(WebPageParserAbstract):
 
         return anime_name
 
-    def _get_anime_original_name(self, item: BeautifulSoup) -> AnimeInfoType.original_name:
+    def _get_anime_original_name(self, item: BeautifulSoup) -> str:
         '''
         Parses anime original name from the item.
         '''
@@ -117,7 +117,7 @@ class WebPageParser(WebPageParserAbstract):
 
         return anime_original_name
 
-    def _get_anime_type(self, item: BeautifulSoup) -> AnimeInfoType.type:
+    def _get_anime_type(self, item: BeautifulSoup) -> AnimeTypes:
         '''
         Parses anime type from the item.
         '''
@@ -127,7 +127,7 @@ class WebPageParser(WebPageParserAbstract):
 
         return anime_type
 
-    def _get_anime_ep_count(self, item: BeautifulSoup) -> AnimeInfoType.ep_count:
+    def _get_anime_ep_count(self, item: BeautifulSoup) -> typ.Union[int, None]:
         '''
         Parses anime episodes count from the item.
         '''
@@ -147,7 +147,7 @@ class WebPageParser(WebPageParserAbstract):
 
         return anime_ep_count
 
-    def _get_anime_status(self, item: BeautifulSoup) -> AnimeInfoType.status:
+    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatuses:
         '''
         Parses anime status from the item.
         '''
@@ -157,7 +157,7 @@ class WebPageParser(WebPageParserAbstract):
         
         return anime_status
 
-    def _get_anime_year(self, item: BeautifulSoup) -> AnimeInfoType.year:
+    def _get_anime_year(self, item: BeautifulSoup) -> int:
         '''
         Parses anime year from the item.
         '''
@@ -167,7 +167,7 @@ class WebPageParser(WebPageParserAbstract):
         
         return anime_year
 
-    def _get_other_names(self, item: BeautifulSoup) -> AnimeInfoType.other_names:
+    def _get_other_names(self, item: BeautifulSoup) -> typ.List[str]:
         '''
         Parses anime other names from the item.
         '''

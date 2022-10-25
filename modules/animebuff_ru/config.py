@@ -22,8 +22,9 @@ class AnimeBuffRuConfig(ac.SiteSettings):
     proxies = cfg.REQUEST_PROXIES_FORMAT
     
     url_domain = "animebuff.ru"
-    url_general = "https://animebuff.ru"
-    url_login = "https://animebuff.ru/login"
+    url_general = f"https://{url_domain}"
+    url_login = f"{url_general}/login"
+    url_search = f"{url_general}/search?q="
     url_wath_lists = f"{url_general}/users/{user_num}/watchlist"
     url_type_option = "?type="
 
