@@ -104,7 +104,6 @@ class WatchListTypes(Enum):
     DELAYED = "delayed"
     REVIEWED = "reviewed"
 
-
 class AnimeTypes(Enum):
     '''Types of anime.'''
     TV = 'tv-serial'
@@ -141,6 +140,18 @@ class LinkedAnimeInfoType(AnimeInfoType):
     link: AnyHttpUrl
 
 
-AnimeByWatchList = typ.Dict[WatchListTypes, AnimeInfoType]
+TitleDump: typ.Dict = AnimeInfoType
+TitleDumpByKey = typ.Dict[str, TitleDump]
+AnimeByWatchList = typ.Dict[WatchListTypes, TitleDumpByKey]
+
+WatchListCompatibility = dict({
+    'watch': WatchListTypes.WATCH,
+    'desired': WatchListTypes.DESIRED,
+    'viewed': WatchListTypes.VIEWED,
+    'abandone': WatchListTypes.ABANDONE,
+    'favorites': WatchListTypes.FAVORITES,
+    'delayed': WatchListTypes.DELAYED,
+    'reviewed': WatchListTypes.REVIEWED
+})
 
 #--Finish global constants block
