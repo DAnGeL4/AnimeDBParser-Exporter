@@ -9,6 +9,7 @@ import multiprocessing as mp
 from concurrent import futures as fts
 from pathlib import Path
 from pydantic import AnyHttpUrl
+
 #Custom imports
 from configs import settings as cfg
 from configs import abstract_classes as ac
@@ -25,7 +26,7 @@ class WebPageService:
     '''
     
     def __init__(self, module_name: str, config_module: ac.SiteSettings, 
-                 queue: mp.Queue=None) -> typ.NoReturn:
+                 queue: mp.Queue=None):
         self._module_name = module_name
         self._queue = queue
         self._logger = OutputLogger(duplicate=True, queue=self._queue, 
@@ -127,16 +128,16 @@ class WebPageService:
         req_conn = RequestsConnections(self._module_name, 
                                        self.config_module, self._queue)
         
-        self._logger.info("Preparing the configuration module...")
+        self._logger.info(f"Preparing the configuration module ({self._module_name})...")
         
         web_page = req_conn.get_web_page(type, self.config_module.url_general, 
                                         RequestMethods.GET)
         res = self.config_module.make_preparing(web_page)
         
         if not res:
-            self._logger.critical("...preparing failed.")
+            self._logger.critical("...preparing failed.\n")
         else:
-            self._logger.success("...preparing done.")
+            self._logger.success("...preparing done.\n")
         return res
     
     def get_web_page_file(self, type: WatchListTypes, 
@@ -225,22 +226,22 @@ class WebPageParser(ac.WebPageParserAbstract):
     '''
 
     def __init__(self, module: ac.ConnectedModuleType, 
-                     type: WatchListTypes) -> typ.NoReturn:
+                       type: WatchListTypes, queue: mp.Queue=None):
         self._module = module
         self._config_mod = module.config_module
         self._parser_mod = module.parser_module
                          
         self._type = type
+        self._queue = queue
         self._mg_url = self._config_mod.url_general
         self._module_name = module.module_name
-        self._web_serv = WebPageService(self._module_name, self._config_mod)
+        self._web_serv = WebPageService(self._module_name, 
+                                        self._config_mod, self._queue)
                          
-        json_file_name = self._config_mod.user_num + "_" + module.json_dump_name
+        json_file_name = self._config_mod.user_num + "_" + self._module.json_dump_name
         self._json_dump_name = self._module_name + "/" + json_file_name
                          
-        self._parser_mod.__init__(self, self._mg_url)
-        self._queue = None
-        self._default_logger = self._logger
+        self._parser_mod.__init__(self, self._mg_url, self._queue)
         self._init_methods()
 
     def _init_methods(self) -> typ.NoReturn:
@@ -257,16 +258,6 @@ class WebPageParser(ac.WebPageParserAbstract):
             if method_name == '__init__': continue
             typed_method = types.MethodType(method, self)
             setattr(self, method_name, typed_method)
-
-    def set_new_logger(self, duplicate: bool, name: str) -> typ.NoReturn:
-        '''Sets the new current logger.'''
-        redir_out = OutputLogger(duplicate=True, queue=self._queue, 
-                                 name=name)
-        self._logger = redir_out.logger
-
-    def set_default_logger(self) -> typ.NoReturn:
-        '''Sets the default logger to default.'''
-        self._logger = self._default_logger
 
     def log_parser_errors(self, error_web_pages: typ.List[
                           typ.Dict[str, AnyHttpUrl]]) -> typ.NoReturn:

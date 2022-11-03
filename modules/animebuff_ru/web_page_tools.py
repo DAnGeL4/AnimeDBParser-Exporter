@@ -1,6 +1,7 @@
 #--Start imports block
 #System imports
 import typing as typ
+import multiprocessing as mp
 from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 #Custom imports
@@ -17,8 +18,12 @@ class WebPageParser(WebPageParserAbstract):
     and its transformation to a unified state.
     '''
     
-    def __init__(self, module_url_general: AnyHttpUrl) -> typ.NoReturn:
-        self._logger = OutputLogger(duplicate=True).logger
+    def __init__(self, module_url_general: AnyHttpUrl, 
+                 queue: mp.Queue=None) -> typ.NoReturn:
+        self._queue = queue
+        self._logger = OutputLogger(duplicate=True, 
+                                    queue=self._queue, 
+                                    name='parser_animebuff_ru').logger
         
         self._url_general = module_url_general
         

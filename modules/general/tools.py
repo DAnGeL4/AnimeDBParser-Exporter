@@ -9,6 +9,7 @@ import multiprocessing as mp
 from types import TracebackType
 from contextlib import redirect_stdout
 from logging.handlers import QueueHandler
+
 #Custom imports
 from configs import settings as cfg
 #--Finish imports block
@@ -28,7 +29,7 @@ class OutputLogger:
     #----------------------------
     
     def __init__(self, duplicate: bool, queue: mp.Queue=None, 
-                 name: str="general", level: str="INFO") -> typ.NoReturn:
+                 name: str="general", level: str="INFO"):
         self.logger = logging.getLogger(name)
         self.name = self.logger.name
         _ = self._add_logger_success_level()
@@ -188,33 +189,55 @@ class ListenerLogger:
             return res
             
         return wrapper
+
+    @staticmethod
+    def set_new_logger(self_obj, duplicate: bool, name: str) -> typ.NoReturn:
+        '''Sets the new current logger for self object.'''
+        
+        assert hasattr(self_obj, "_logger"), \
+               "The self object does not have an attr _logger."
+        
+        self_obj._default_logger = self_obj._logger
+        redir_out = OutputLogger(duplicate=duplicate, queue=self_obj._queue, 
+                                 name=name)
+        self_obj._logger = redir_out.logger
+
+    @staticmethod
+    def set_default_logger(self_obj) -> typ.NoReturn:
+        '''Sets the default logger to default.'''
+        
+        assert hasattr(self_obj, "_default_logger"), \
+               "The self object does not have an attr _default_logger."
+        
+        self_obj._logger = self_obj._default_logger
         
     @staticmethod
     def listener_preparing(redirected_function: typ.Callable) -> typ.Callable:
         '''
         Preparation of the listener's process 
-        for sorting Log messages from redirected function.
+        for sorting log messages from redirected function.
         '''
         @functools.wraps(redirected_function)
-        def wrapper(self, *args, **kw):      
-            assert hasattr(self, "set_new_logger"), \
-                   "The self object does not have an attr set_new_logger."
-            assert hasattr(self, "set_default_logger"), \
-                   "The self object does not have an attr set_default_logger."
-            
-            self._queue = mp.Manager().Queue(-1)
-            self.set_new_logger(True, name="multi_proc_run")
+        def wrapper(self_obj, *args, **kwargs):
+            '''
+            Processes the instance (self-object) 
+            for the needs of Listener.
+            '''
+            queue_before = self_obj._queue
+            self_obj._queue = mp.Manager().Queue(-1)
+            ListenerLogger.set_new_logger(self_obj, True, name="multi_proc_run")
                                               
-            listener_logger = ListenerLogger(self._queue)
+            listener_logger = ListenerLogger(self_obj._queue)
             listener = listener_logger.get_listener_proc()
             listener.start()
             
-            res = redirected_function(self, *args, **kw)
+            res = redirected_function(self_obj, *args, **kwargs)
                 
             listener_logger.stop_listener_queue()
             listener.join()
                     
-            self.set_default_logger()
+            ListenerLogger.set_default_logger(self_obj)
+            self_obj._queue = queue_before
             return res
             
         return wrapper
