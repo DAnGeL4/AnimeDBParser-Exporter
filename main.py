@@ -2,14 +2,12 @@
 #System imports
 import functools
 import typing as typ
+
 #Custom imports
-from configs import abstract_classes as ac
-from configs.settings import WatchListTypes
-from configs.settings import ENABLE_PARSING_MODULE, ENABLE_EXPORTER_MODULE
-from configs.connected_modules import EnabledParserModules
+from configs.connected_modules import EnabledModules
+from configs.connected_modules import ModuleAnimeBuffRu, ModuleAnimeGoOrg
 from modules.general.tools import OutputLogger
-from modules.general.proxy_checker import ProxyChecker
-from modules.general.web_page_tools import WebPageService, WebPageParser
+from modules.general.main import MainService
 #--Finish imports block
 
 
@@ -23,7 +21,7 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
         logger = redir_out.logger
         
         logger.info("STARTED...\n")
-        logger.info("-----")
+        logger.info("-----\n")
         
         res = redirected_function(*args, **kwargs)
         
@@ -35,39 +33,23 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
 #--Finish decorators block
 
 
-#--Start functional block
-def parse_selected_module(module: ac.ConnectedParserModuleType) -> typ.NoReturn:
-    ''''''    
-    prx_chk = ProxyChecker()
-    prx_chk.prepare_proxy_lists(module.config_module.url_general)
-
-    web_serv = WebPageService(module.config_module)
-    if not web_serv.get_preparing(): return
-    
-    for type in WatchListTypes:
-        page_parser = WebPageParser(module, type)
-        page_parser.parse_typed_watchlist()
-
-def parse_all_modules(module: ac.ConnectedParserModuleType=None) -> typ.NoReturn:
-    ''''''
-    if module:
-        parse_selected_module(module)
-    else:
-        for module in EnabledParserModules:
-            parse_selected_module(module)
-    return
-#--Finish functional block
-
-
 #--Start main block
 @basic_output
 def main() -> typ.NoReturn:
     '''Entry point.'''
 
-    if ENABLE_PARSING_MODULE:
-        _ = parse_all_modules()
-    if ENABLE_EXPORTER_MODULE:
-        pass
+    #user select
+    #temporary solution
+    selected_modules = dict({
+        EnabledModules.parse.name: ModuleAnimeBuffRu,
+        EnabledModules.export.name: ModuleAnimeGoOrg
+    })
+    selected_action = EnabledModules.export
+    #----
+
+    m_serv = MainService()
+    _ = m_serv.processing_for_selected_module(selected_modules, 
+                                              selected_action)
     
     return
         

@@ -36,4 +36,10 @@ EnabledParserModules = list([
 EnabledSubmitModules = list([
     ModuleAnimeGoOrg,
 ])
+
+
+class EnabledModules(Enum):
+    '''Contains lists of modules by actions.'''
+    parse = EnabledParserModules
+    export = EnabledSubmitModules
 #--Finish functional block
