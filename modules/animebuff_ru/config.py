@@ -42,8 +42,7 @@ class AnimeBuffRuConfig(ac.SiteSettings):
     }
 
     cookies = {
-        "animebuff_session": os.environ['animebuff_session_value'],
-        "XSRF-TOKEN": os.environ['XSRF-TOKEN-VALUE']
+        "animebuff_session": os.environ['animebuff_session_value']
     }
 
     headers = CaseInsensitiveDict([

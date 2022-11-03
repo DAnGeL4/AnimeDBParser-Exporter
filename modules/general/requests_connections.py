@@ -26,16 +26,11 @@ class RequestsConnections(ac.SiteSettings):
         self._logger = _redir_out.logger
         
         self._url_domain = config_obj.url_domain
-        #self._url_general = config_obj.url_general
-        #self.url_login = config_obj.url_login
         self._url_wath_lists = config_obj.url_wath_lists
         self._url_type_option = config_obj.url_type_option
         self._url_types = config_obj.url_types
         self._headers = config_obj.headers
         self._cookies = config_obj.cookies
-        #self.login = config_obj.login
-        #self.password = config_obj.password
-        #self.payload = config_obj.payload
         self._use_proxy = config_obj.use_proxy
         self._proxies = config_obj.proxies
 
@@ -134,7 +129,7 @@ class RequestsConnections(ac.SiteSettings):
         session = self.get_new_session()
         correct_proxies = self.get_correct_proxies()
 
-        self._logger.info(f"Correct proxies:\n{correct_proxies}\n")
+        self._logger.info(f"Correct proxies: {len(correct_proxies)}\n")
         
         for proxy in correct_proxies:
             session.proxies["http"] = proxy
