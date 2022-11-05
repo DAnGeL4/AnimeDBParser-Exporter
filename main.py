@@ -7,7 +7,7 @@ import typing as typ
 from configs.connected_modules import EnabledModules
 from configs.connected_modules import ModuleAnimeBuffRu, ModuleAnimeGoOrg
 from modules.general.tools import OutputLogger
-from modules.general.main import MainService
+from modules.general.main_tools import MainService
 #--Finish imports block
 
 
