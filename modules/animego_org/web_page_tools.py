@@ -119,8 +119,14 @@ class WebPageParser(WebPageParserAbstract):
         Parses of a list of card items.
         '''
         soup = BeautifulSoup(web_page, 'lxml')
-        item_amime_list = soup.find(class_='animes-grid')
-        items_anime_cards = item_amime_list.find_all(class_='animes-grid-item-body')
+        
+        try:    
+            item_amime_list = soup.find(class_='animes-grid')
+            items_anime_cards = item_amime_list.find_all(class_='animes-grid-item-body')
+            
+        except:
+            return list()
+            
         return items_anime_cards
 
     def parse_action_link(self, web_page: WebPage, 
