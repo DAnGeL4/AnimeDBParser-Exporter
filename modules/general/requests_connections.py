@@ -63,6 +63,7 @@ class RequestsConnections(ac.SiteSettings):
 
     def _get_typed_url(self, type: str) -> AnyHttpUrl:
         '''Concatenates urls.'''
+        if type not in self._url_types: return None
         url = self._url_wath_lists + self._url_type_option + self._url_types[type]
         return url
 
@@ -164,6 +165,8 @@ class RequestsConnections(ac.SiteSettings):
         Gets a web-page by parameters.
         '''
         if not url: url = self._get_typed_url(type)
+        if not url: return None
+            
         web_page = None
         
         self._logger.info("Trying to get correct response...")
