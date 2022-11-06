@@ -4,11 +4,13 @@ import typing as typ
 import multiprocessing as mp
 from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
+
 #Custom imports
 from configs.settings import AnimeInfoType, WebPage, AnimeTypes, AnimeStatuses
 from configs.abstract_classes import WebPageParserAbstract
 from modules.general.tools import OutputLogger
 #--Finish imports block
+
 
 #--Start functional block
 class WebPageParser(WebPageParserAbstract):
@@ -77,7 +79,6 @@ class WebPageParser(WebPageParserAbstract):
             year=self._get_anime_year(a_items_status_year),
             status=self._get_anime_status(a_items_status_year)
         )
-        
         return info_obj
 
     def _get_item_by_tag(self, tag: str, item_list_info: BeautifulSoup):
