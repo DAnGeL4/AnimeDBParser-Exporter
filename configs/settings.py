@@ -7,6 +7,7 @@ import typing as typ
 from enum import Enum
 from dataclasses import dataclass
 from pydantic import AnyHttpUrl
+from dataclasses import asdict
 #--Finish imports block
 
 
@@ -133,6 +134,8 @@ class AnimeInfoType:
     year: int
     status: AnimeStatuses
 
+    def _asdict(self):
+        return {k: v for k, v in asdict(self).items()}
 
 @dataclass
 class LinkedAnimeInfoType(AnimeInfoType):
