@@ -27,6 +27,7 @@ class TitleExporter:
         self._module_name = self._module.module_name
         self._config_mod = self._module.config_module
         self._parser_mod = self._module.parser_module
+        self._error_titles_file = "error_titles.json"
                          
         self._type = None
         self._parser = WebPageParser(self._module, self._type)
@@ -121,47 +122,79 @@ class TitleExporter:
         Receives a link to the desired action 
         from the web page and sends a request to it.
         '''
-        self._logger.info("Starting submiting...")
+        self._logger.info("Starting submitting...")
         
         action_link = self._parser.parse_action_link(web_page, self._type)
         if not action_link:
-            self._logger.error("...can't get action link.")
-            self._logger.error("...submiting failed.\n")
+            self._logger.error("...can't get action link...")
+            self._logger.error("...submitting failed.\n")
             return False
             
         url = self._config_mod.url_general + action_link
         _ = self.send_request(url, cfg.RequestMethods.POST)
         
-        self._logger.success("...finishing submiting.\n")
+        self._logger.success("...submitting completed.\n")
         return True
+
+    def get_json_dump_name(self, mod_name: str, user_num: int, 
+                           dump_name: typ.Union[str, Path]) -> typ.Union[str, Path]:
+        '''
+        Returns a new dump file name.
+        '''
+        json_file_name = user_num + "_" + dump_name
+        dump_name = mod_name + "/" + json_file_name
+        return dump_name
     
     def get_titles_dump(self, query_module: ac.ConnectedModuleType) -> cfg.AnimeByWatchList:
         '''
         Receives a dump base for an anime for a user.
         '''
         mod_name = query_module.module_name
+        user_num = query_module.config_module.user_num
+        file_name = query_module.json_dump_name
 
         self._logger.info("Getting json dump for the " + 
                           f"requested module ({mod_name})...")
             
-        user_num = query_module.config_module.user_num
-        json_file_name = user_num + "_" + query_module.json_dump_name
-        json_dump_name = mod_name + "/" + json_file_name
+        json_dump_name = self.get_json_dump_name(mod_name, user_num, file_name)
                             
         web_serv = WebPageService(self._module_name, self._config_mod)
         json_data = web_serv.load_json_data(mod_name, json_dump_name)
         
         if json_data: self._logger.success("...dump taken.\n")
-        return json_data
+        return json_data    
+    
+    def save_error_titles(self, error_titles) -> typ.NoReturn:
+        '''
+        Saves a error titles of an anime for a user to file.
+        '''
+        mod_name = self._module_name
+        user_num = self._config_mod.user_num
+        file_name = self._error_titles_file
 
-    def print_error_titles(self, error_titles: typ.Dict[dict, list]) -> typ.NoReturn:
+        self._logger.info("Saving error titles of an anime for a user...")
+            
+        json_dump_name = self.get_json_dump_name(mod_name, user_num, file_name)
+                            
+        web_serv = WebPageService(self._module_name, self._config_mod)
+        json_data = web_serv.save_data_to_json(mod_name, json_dump_name, 
+                                               error_titles)
+        
+        if json_data: self._logger.success("...error titles saved.\n")
+        return None
+
+    def print_error_titles(self, error_titles: typ.Dict[str, list]) -> typ.NoReturn:
         '''
         Displays titles with failed export.
         '''
+        errors = False
         for type_, titles in error_titles.items():
             if not titles: continue
-            err_msg = '\n'.join(titles)
-            self._logger.error(f"Not exported titles for {type}:\n{err_msg}")
+            errors = True
+            self._logger.error(f"Not exported titles for {type_}: {len(titles)}")
+
+        if errors:
+            _ = self.save_error_titles(error_titles)
 
     @ListenerLogger.send_stop_msg
     def export_selected_title(self, title_item: typ.Tuple[str, cfg.TitleDump]
