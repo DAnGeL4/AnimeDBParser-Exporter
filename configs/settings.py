@@ -83,6 +83,8 @@ ONLINE_PROXY_LISTS = dict({
 Response = requests.models.Response
 Session = cfscrape.CloudflareScraper
 WebPage = Response    
+JSON = typ.Union[typ.Dict[str, typ.Any], typ.List[typ.Dict[str, typ.Any]]]
+Cookies = typ.AnyStr
 
 class RequestMethods(Enum):
     '''Contains types of HTTP requesting methods.'''

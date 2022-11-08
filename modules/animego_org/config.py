@@ -1,6 +1,9 @@
 #--Start imports block
 #System imports
 import os
+import re
+import json
+import typing as typ
 from bs4 import BeautifulSoup
 from requests.structures import CaseInsensitiveDict
 
@@ -32,7 +35,7 @@ class AnimeGoOrgConfig(ac.SiteSettings):
 
     url_types = dict()
     cookies = {
-        "REMEMBERME": os.environ['animego_REMEMBERME']
+        "REMEMBERME": "null"
     } 
     headers = CaseInsensitiveDict([
         ("User-Agent", 
@@ -43,8 +46,14 @@ class AnimeGoOrgConfig(ac.SiteSettings):
         ("Content-Type", "application/json")
     ])
 
-    @classmethod
-    def make_preparing(cls, web_page: cfg.WebPage) -> bool:
+    def __init__(self, unproc_cookies):
+        cookie = self._get_coockie_by_key("REMEMBERME", unproc_cookies)
+        cookies = {
+            "REMEMBERME": json.dumps(cookie)
+        } 
+        self.cookies = cookies
+        
+    def make_preparing(self, web_page: cfg.WebPage) -> bool:
         '''
         Performs the initial preparation of the configuration module.
         Gets a profile identifier and corrects watchlists url.
@@ -56,9 +65,9 @@ class AnimeGoOrgConfig(ac.SiteSettings):
             item_profile = login_nav.find(class_="text-nowrap")
             user = item_profile.text.strip()
     
-            cls.user = user
-            cls.user_num = ''.join(map(str, map(ord, cls.user)))
-            cls.url_wath_lists = f"{cls.url_general}/users/{user}/watchlist"
+            self.user = user
+            self.user_num = ''.join(map(str, map(ord, self.user)))
+            self.url_wath_lists = f"{self.url_general}/users/{user}/watchlist"
             
         except:
             return False

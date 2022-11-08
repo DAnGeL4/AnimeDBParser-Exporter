@@ -1,6 +1,7 @@
 #--Start imports block
 #System imports
 import os
+import json
 from bs4 import BeautifulSoup
 from requests.structures import CaseInsensitiveDict
 #Custom imports
@@ -42,7 +43,7 @@ class AnimeBuffRuConfig(ac.SiteSettings):
     }
 
     cookies = {
-        "animebuff_session": os.environ['animebuff_session_value']
+        "animebuff_session": "null"
     }
 
     headers = CaseInsensitiveDict([
@@ -52,8 +53,14 @@ class AnimeBuffRuConfig(ac.SiteSettings):
          "Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0")
     ])
 
-    @classmethod
-    def make_preparing(cls, web_page: cfg.WebPage) -> bool:
+    def __init__(self, unproc_cookies):
+        cookie = self._get_coockie_by_key("animebuff_session", unproc_cookies)
+        cookies = {
+            "animebuff_session": json.dumps(cookie)
+        } 
+        self.cookies = cookies
+
+    def make_preparing(self, web_page: cfg.WebPage) -> bool:
         '''
         Performs the initial preparation of the configuration module.
         Gets a profile identifier and corrects watchlists url.
@@ -67,8 +74,8 @@ class AnimeBuffRuConfig(ac.SiteSettings):
             profile_url = item_profile.get("href")
             user_num = profile_url.split('/')[-1]
     
-            cls.user_num = user_num
-            cls.url_wath_lists = f"{cls.url_general}/users/{user_num}/watchlist"
+            self.user_num = user_num
+            self.url_wath_lists = f"{self.url_general}/users/{user_num}/watchlist"
             
         except:
             return False

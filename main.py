@@ -1,5 +1,6 @@
 #--Start imports block
 #System imports
+import os
 import functools
 import typing as typ
 
@@ -41,8 +42,12 @@ def main() -> typ.NoReturn:
     #user select
     #temporary solution
     selected_modules = dict({
-        EnabledModules.parse.name: ModuleAnimeBuffRu,
-        EnabledModules.export.name: ModuleAnimeGoOrg
+        EnabledModules.parse.name: ModuleAnimeBuffRu(
+            cookies=os.environ['animebuff_session_value']
+        ),
+        EnabledModules.export.name: ModuleAnimeGoOrg(
+            cookies=os.environ['animego_REMEMBERME']
+        )
     })
     selected_action = EnabledModules.export
     #----

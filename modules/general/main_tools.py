@@ -40,7 +40,7 @@ class MainService:
             self.logger.error(f"{action.capitalize()} action disabled.\n")
             return False
             
-        if module not in EnabledModules[action].value:
+        if type(module) not in EnabledModules[action].value:
             self.logger.error(f"{action.capitalize()} action for module " + 
                               f"{module.module_name} are disabled.\n")
             return False
