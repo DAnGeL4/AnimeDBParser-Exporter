@@ -140,4 +140,6 @@ cython_debug/
 #Custom files
 .breakpoints
 
+flask_session/
+
 trash

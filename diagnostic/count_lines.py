@@ -22,6 +22,7 @@ ignore_list = [
     './poetry.lock',
     './__pycache__',
     '__pycache__',
+    './flask_session',
 
     './var',
     './logs',
