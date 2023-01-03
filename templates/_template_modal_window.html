@@ -1,0 +1,48 @@
+
+    <div class="modal fade" id="moduleSettingUpModal" 
+         tabindex="-1" aria-labelledby="moduleSettingUpModalLabel" 
+         aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="moduleSettingUpModalLabel">
+              Settings
+            </h1>
+            <button type="button" class="btn-close" 
+                    data-bs-dismiss="modal" aria-label="Close">
+            </button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="mb-3">
+                <label for="modulesSelect" class="form-label">Target module:</label>
+                <select id="modulesSelect" name="modulesSelect" 
+                        class="form-select" data-toggle="tooltip" 
+                        title="Select the cinema module for parsing">
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="cookieInput" class="form-label">Cookies:</label>
+                <textarea type="text" id="cookieInput"
+                        class="form-control" name="cookieInput"
+                        placeholder="Paste valid cookies for a selected module" 
+                        data-toggle="tooltip" title="Edit a cookies">
+                </textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" 
+                    data-bs-dismiss="modal">
+              Close
+            </button>
+            <button type="button" class="btn btn-outline-primary"
+                    onclick = "settingup_submit()" 
+                    id="modal_setup_button" data-bs-whatever="parser">
+              <span class="visually-hidden spinner-border spinner-border-sm" aria-hidden="true"></span>
+              Login and get user data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>

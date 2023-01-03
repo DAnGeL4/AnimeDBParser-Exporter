@@ -1,0 +1,11 @@
+{# required variables -- [selected_tab, parser_progress, exporter_progress] #}
+
+{% set expanded = false %}
+
+{% set tab_key = 'parse' %}
+{% set progress = parser_progress %}
+{% include '_template_progress_bar.html' %}
+
+{% set tab_key = 'export' %}
+{% set progress = exporter_progress %}
+{% include '_template_progress_bar.html' %}

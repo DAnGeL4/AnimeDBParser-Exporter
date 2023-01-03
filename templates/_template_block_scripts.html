@@ -1,0 +1,54 @@
+{# required variables -- [session, settings, parsed_titles, exported_titles] #}
+
+    <script src="{{ url_for('static', filename='js/utils.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/alert_utils.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/pills_content_changer.js')}}"></script>
+    <script type="text/javascript">
+        pills_content_changer({{ session['parser'] | tojson }},
+                              {{ session['exporter'] | tojson }})
+    </script>
+
+    <script src="{{ url_for('static', filename='js/modal_show.js')}}"></script>
+    <script type="text/javascript">
+        modal_show_prapring({{ settings['parse_modules'] | tojson }},
+                            {{ settings['export_modules'] | tojson }},
+                            {{ session['parser'] | tojson }},
+                            {{ session['exporter'] | tojson }})
+    </script>
+
+    <script src="{{ url_for('static', filename='js/send_setup.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/dropdown_tab_changer.js')}}"></script>
+
+    <script src="{{ url_for('static', filename='js/action.js')}}"></script>
+    <script type="text/javascript">
+        function onclick_action() {
+            $(document).ready(function(){
+                var action = $('#tab_action_button').val(),
+                    username = null
+              
+                if (action === "parse") {
+                    username = {{ session['parser']['username'] | tojson }}
+                } else if (action === "export") {
+                    username = {{ session['exporter']['username'] | tojson }}
+                }
+      
+                _ = do_action(username)
+            })
+        }
+    </script>
+
+    <script src="{{ url_for('static', filename='js/offcanvas_content_change.js')}}"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+          $('.tab-pane .list-group-item').on('click', function() {
+              var clicked_item = $(this),
+                  case_data = {
+                      'parse':  {{ parsed_titles | tojson }},
+                      'export': {{ exported_titles | tojson }}
+                  }
+
+              var title_data = get_title_data(clicked_item, case_data)
+              _ = fill_offcanvas(clicked_item, title_data)
+          })
+      })
+    </script>

@@ -1,0 +1,88 @@
+{% extends '_inherited_carcas.html' %}
+
+
+{% block navbar %}
+    {% include '_template_navbar_menu.html' %}
+{% endblock %}
+
+
+{% block main %} 
+
+    <main class="container">
+      
+      {% block modal %} {% endblock %}
+      {% block side_offcanvas %} {% endblock %}
+    
+      <div class="d-flex flex-row py-4 justify-content-center 
+                  row row-cols-1 row-cols-lg-3"> 
+        
+        <div class="order-2 order-lg-1
+                    col col-12 col-md-8 col-lg-4 
+                    border-right pt-3 pt-lg-0">
+          <div class="d-flex flex-column col 
+                      align-items-stretch bg-white">
+            
+            <div class="d-flex w-100 align-items-center 
+                        justify-content-center border 
+                        border-bottom-0 rounded-top">
+              <span class="fs-5 fw-semibold text-secondary">Parsed titles</span>
+            </div>
+              
+            <div id="parsed_titles"> 
+              {% block parsed_titles %} {% endblock %}
+            </div>
+            
+          </div>
+          
+        </div>
+        
+        <div class="flex-column order-1 order-lg-2
+                    col col-12 col-md-8 col-lg-4">
+          
+          <div id="alert_block" class="d-flex position-relative justify-content-center">
+            {% block alert_block %} {% endblock %}
+          </div>
+          
+          <div class="d-flex h-100 justify-content-lg-center 
+                      align-items-lg-center">
+            <div class="container">
+              
+              <div class="d-flex w-100 justify-content-center 
+                          border border-bottom-0 rounded-top">
+                  <span class="fs-5 fw-semibold text-secondary">Modules settings</span>
+              </div>
+  
+              {% block modules_settings %} {% endblock %}
+              
+            </div>
+          </div>
+        </div>
+    
+        <div class="order-3 order-lg-3
+                    col col-12 col-md-8 col-lg-4 
+                    border-right">
+          <div class="d-flex flex-column col 
+                      align-items-stretch bg-white">
+            
+            <div class="d-flex w-100 align-items-center 
+                        justify-content-center border 
+                        border-bottom-0 rounded-top">
+              <span class="fs-5 fw-semibold text-secondary">Exported titles</span>
+            </div>
+    
+            <div id="exported_titles"> 
+              {% block exported_titles %} {% endblock %}
+            </div>
+          </div>
+          
+        </div>
+        
+      </div>
+    </main>
+
+{% endblock %}
+
+
+{% block footer %} 
+    {% include '_template_footer_menu.html' %}
+{% endblock %}

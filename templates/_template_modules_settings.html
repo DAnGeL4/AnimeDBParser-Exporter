@@ -1,0 +1,86 @@
+{# required variables -- [session] #}
+
+            <div class="container border border-top-0 pb-3">
+              
+              <form method="POST" id="action-form">
+                <ul class="nav nav-pills nav-justified pt-3 " id="pills-tabs" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link h-100 active" id="pills-parser-tab" 
+                            data-bs-toggle="pill" data-bs-target="#pills-tab" 
+                            type="button" role="tab" aria-controls="pills-tab" 
+                            aria-selected="true">Parser settings</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link h-100" id="pills-exporter-tab" 
+                            data-bs-toggle="pill" data-bs-target="#pills-tab" 
+                            type="button" role="tab" aria-controls="pills-tab" 
+                            aria-selected="false">Exporter settings</button>
+                  </li>
+                </ul>
+                <div class="tab-content" id="pills-tabContent">
+                  
+                  <div class="tab-pane fade show active" id="pills-tab" 
+                       role="tabpanel" aria-labelledby="pills-parser-tab">
+                    <div class="flex-row row pt-3 px-2">
+                      {% set username = session['parser']['username'] %}
+                      {% set selected_module = session['parser']['selected_module'] %}
+                      <div class="col col-12 col-sm-6 col-lg-12 col-xxl-6 
+                                  form-floating px-1">
+                          <input disabled type="text" id="selected_module"
+                                 aria-describedby="selected_module_addon"
+                                 class="form-control" placeholder="[Not selected]" 
+                                 data-toggle="tooltip" title="Set up module to get user data"
+                                 value="{{ selected_module if username else '[Not selected]' }}">
+                          <label for="selected_module">Module</label>
+                      </div>
+                      <div class="col col-12 col-sm-6 col-lg-12 col-xxl-6 
+                                  form-floating px-1">
+                          <input disabled type="text" id="authorized_user"
+                                 aria-describedby="authorized_user_addon"
+                                 class="form-control" placeholder="[Not authorized]" 
+                                 data-toggle="tooltip" title="Set up module to get user data"
+                                 value="{{ username if username else '[Not authorized]' }}">
+                          <label for="authorized_user_addon">Username</label>
+                      </div>
+                    </div>
+                    
+                    <div class="flex-row row py-3">
+                      <div class="col flex-column col-12 col-xxl-6 pe-xxl-1">
+                        <button type="button" class="btn btn-outline-primary h-100 w-100" 
+                                id="tab_setup_button"
+                                data-bs-toggle="modal" data-bs-target="#moduleSettingUpModal" 
+                                data-bs-whatever="parser">
+                          <span class="visually-hidden spinner-border spinner-border-sm" 
+                                aria-hidden="true"></span>
+                          Setting up
+                        </button>
+                      </div>
+                      <div class="col flex-column col-12 col-xxl-6 ps-xxl-1">
+                        <button type="button" class="btn btn-outline-dark h-100 w-100" 
+                                id="tab_action_button"
+                                name="parse" value="parse" 
+                                onclick="onclick_action()"
+                                data-toggle="tooltip" 
+                                title="Starts the selected action for the selected module">
+                          <span class="visually-hidden spinner-border spinner-border-sm" 
+                                aria-hidden="true"></span>
+                          Parse
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="accordion" id="accordion_progress">
+
+                      {% set selected_tab = 'parse' %}
+                      {% set parser_progress = settings['parser']['progress'] %}
+                      {% set exporter_progress = settings['exporter']['progress'] %}
+                      
+                      {% include '_template_progress_accordion.html' %}
+                      
+                    </div>
+                    
+                  </div>
+                </div>
+              </form>
+
+            </div>

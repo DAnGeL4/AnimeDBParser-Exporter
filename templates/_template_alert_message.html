@@ -1,0 +1,12 @@
+{# required variables -- [status, message] #}
+
+{% set status_colors = {'done': 'alert-success', 'info': 'alert-primary', 
+                        'fail': 'alert-danger', 'warning': 'alert-warning'} %}
+{% set status_color = status_colors[status] %}
+
+            <div class="visually-hidden alert {{ status_color }} alert-dismissible 
+                        position-absolute fade show">
+              <strong class="text-capitalize">{{ status }}</strong>: <span>{{ message }}</span>
+              <button type="button" class="btn-close" aria-label="Close"></button>
+            </div>
+            

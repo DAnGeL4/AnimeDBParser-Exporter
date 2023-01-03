@@ -1,0 +1,43 @@
+{% extends '_inherited_base.html' %}
+
+
+{% block title %} Title parser-exporter {% endblock %}
+
+
+{% block scripts %} 
+    {% include '_template_block_scripts.html' %}
+{% endblock %}
+
+
+{% block modal %}
+    {% include '_template_modal_window.html' %}
+{% endblock %}
+
+
+{% block side_offcanvas %} 
+    {% set side = 'left' %}
+    {% include '_template_offcanvas_sides.html' %}
+
+    {% set side = 'right' %}
+    {% include '_template_offcanvas_sides.html' %}
+{% endblock %}
+
+
+{% block parsed_titles %}
+    {% include '_template_parsed_titles.html' %}
+{% endblock %}
+
+
+{% block alert_block %}
+    {% include '_template_alert_message.html' %}
+{% endblock %}
+
+
+{% block modules_settings %} 
+    {% include '_template_modules_settings.html' %}
+{% endblock %}
+
+
+{% block exported_titles %} 
+    {% include '_template_exported_titles.html' %}
+{% endblock %}

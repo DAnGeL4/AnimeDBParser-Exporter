@@ -1,0 +1,69 @@
+{# required variables -- [selected_tab, tab_key, progress, expanded] #}
+
+                      <div class="accordion-item
+                                  {{ '' if selected_tab == tab_key else 'visually-hidden' }}"
+                           id='{{ tab_key }}_accordion_item'>
+                        <h2 class="accordion-header" id="{{ tab_key }}_accordion_label">
+                          <button type="button" class="accordion-button 
+                                  {{ '' if expanded is true else 'collapsed' }}
+                                  {{ 'bg-secondary' if progress['status'] is sameas false else '' }}"
+                                  data-bs-toggle="collapse" data-bs-target="#{{ tab_key }}_accordion_collapse" 
+                                  aria-expanded="{{ 'true' if expanded is true else 'false' }}" 
+                                  aria-controls="{{ tab_key }}_accordion_collapse" 
+                                  {{ 'disabled' if progress['status'] is sameas false else '' }}>
+                            Progress
+                          </button>
+                        </h2>
+                        <div id="{{ tab_key }}_accordion_collapse" 
+                             class="accordion-collapse collapse 
+                                  {{ 'show' if expanded is true else '' }}" 
+                             aria-labelledby="{{ tab_key }}_accordion_label" data-bs-parent="#accordion_progress">
+                          <div class="accordion-body">
+                            
+                            {% set t_now = progress['all']['now'] %}
+                            {% set t_max = progress['all']['max'] %}
+                            {% set w_list = progress['all']['watchlist'] %}
+                            {% if t_max == 0 %}
+                                {% set t_percent = 0 %}
+                            {% else %}
+                                {% set t_percent = t_now * 100 / t_max %}
+                            {% endif %}
+                            
+                            <span class="badge bg-secondary w-100 text-center text-white">
+                              All titles: {{ t_now }}/{{ t_max }}
+                            </span>
+                            <div class="pb-2">
+                              <div class="progress">
+                                <div class="progress-bar progress-bar-striped"  id="common-progress-bar" 
+                                     style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                  {{ t_percent | round(2, 'floor') }}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {% set t_now = progress['current']['now'] %}
+                            {% set t_max = progress['current']['max'] %}
+                            {% set w_list = progress['current']['watchlist'] %}
+                            {% if t_max == 0 %}
+                                {% set t_percent = 0 %}
+                            {% else %}
+                                {% set t_percent = t_now * 100 / t_max %}
+                            {% endif %}
+                            
+                            <span class="badge bg-secondary w-100 text-center text-white">
+                              Titles of {{ w_list }}: {{ t_now }}/{{ t_max }}
+                            </span>
+                            <div>
+                              <div class="progress">
+                                <div class="progress-bar progress-bar-striped"  id="watch-list-bar" 
+                                     style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                  {{ t_percent | round(2, 'floor') }}
+                                </div>
+                              </div>
+                            </div>
+                            
+                          </div>
+                        </div>
+                      </div>

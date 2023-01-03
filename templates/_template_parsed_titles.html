@@ -1,0 +1,131 @@
+{# required variables -- [parsed_titles] #}
+{# optional variables -- [selected_tab] #}
+
+{% set tab_id_template = 'parsed_menu_item_' %}
+{% set content_id_template = 'tab_parsed_' %}
+
+{% set started_item = 'all' %}
+{% if started_item in parsed_titles %}
+    {% set _ = parsed_titles.pop(started_item) %}
+{% endif %}
+
+{% if selected_tab is defined %}
+    {% if selected_tab is none %}
+        {% set selected_tab = started_item %}
+    {% endif %}
+{% else %}
+    {% set selected_tab = started_item %}
+{% endif %}
+
+{% set items = parsed_titles.keys() | list %}
+
+{% if parsed_titles.update({started_item: {}}) %}{% endif %}
+{% for item in items %}
+    {% if parsed_titles[started_item].update(parsed_titles[item]) %}
+    {% endif %}
+{% endfor %}
+
+          <div class="btn-group w-100" id='parsed_dropdown_menu'>
+            
+            <button type="button" class="btn btn-outline-dark dropdown-toggle text-capitalize" 
+                    data-bs-toggle="dropdown" aria-expanded="false">
+              Watchlist: {{ selected_tab }}
+              <span class="badge bg-primary rounded-pill">{{ parsed_titles[selected_tab] | length }}</span>
+            </button>
+            
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+              
+              <li>
+                <div class="d-flex justify-content-between align-items-center">
+                  <button class="dropdown-item rounded-pill text-capitalize  
+                          {{ 'active' if started_item == selected_tab else '' }}" type="button" 
+                          id="{{ tab_id_template }}{{ started_item }}" 
+                          aria-controls="{{ content_id_template }}{{ started_item }}">
+                    <span class="badge bg-light text-dark rounded-pill">
+                      {{ parsed_titles[started_item] | length }}
+                    </span>
+                    {{ started_item }}
+                  </button>
+                </div>
+              </li>
+              
+              {% for item in items %}
+                <li>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <button class="dropdown-item rounded-pill text-capitalize 
+                            {{ 'active' if item == selected_tab else '' }}" 
+                            type="button" id="{{ tab_id_template }}{{ item }}" 
+                             aria-controls="{{ content_id_template }}{{ item }}">
+                      <span class="badge bg-secondary text-dark rounded-pill">
+                        {{ parsed_titles[item] | length }}
+                      </span>
+                      {{ item }}
+                    </button>
+                  </div>
+                </li>
+              {% endfor %}
+              
+            </ul>
+          </div>
+  
+          <div class="tab-content" id="tab_parsed_content">
+            
+            {% for wlist in parsed_titles %}
+            <div class="tab-pane fade border h-100 {{ 'show active' if wlist == selected_tab else '' }}" 
+                 id="{{ content_id_template }}{{ wlist }}" 
+                 aria-labelledby="{{ tab_id_template }}{{ wlist }}">
+              
+              <div class="side-bar list-group list-group-flush scrollarea">
+                
+                {% for title_id in parsed_titles[wlist] %}
+                
+                  {% set title = parsed_titles[wlist][title_id] %}
+                  
+                  <div class="list-group-item 
+                              list-group-item-action 
+                              py-3 lh-tight border-bottom" 
+                      id="{{ title_id }}"
+                      data-bs-toggle="offcanvas" 
+                      data-bs-target="#offcanvas_title_left" 
+                      aria-controls="offcanvas_title_left">
+                    
+                    <div class="d-flex flex-column 
+                                w-100 align-items-start 
+                                justify-content-between">
+                      
+                      <div class="container-fluid">
+                        
+                        <div class="flex-row pb-1">
+                          <span class="badge bg-primary text-dark">
+                            <strong>Name:</strong>
+                          </span>
+                          <strong>{{ title['name'] }}</strong>
+                        </div>
+                        
+                        <div class="flex-row">
+                          <span class="badge bg-danger text-dark">
+                            <small>Type:</small>
+                          </span>
+                          <span class="badge bg-secondary">
+                            <small class="text-uppercase">{{ title['type'] }}</small>
+                          </span>
+            
+                          <span class="badge bg-warning text-dark">
+                            <small>Year:</small>
+                          </span>
+                          <span class="badge bg-secondary">
+                            <small>{{ title['year'] }}</small>
+                          </span>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+                  
+                {% endfor %}
+                
+              </div>
+            </div>
+            {% endfor %}
+            
+          </div>
