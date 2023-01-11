@@ -31,6 +31,7 @@ function get_action_deferred_worker(){
     worker.done(function(action, titles_blk_id, response) {
         _ = show_responsed_alert(response.msg) 
         _ = fill_statusbar(action, response.statusbar_tmpl)
+        _ = hide_act_btn_spinner()
         _ = change_action_btn("stop")
         $(titles_blk_id).html(response.title_tmpl)
     })
@@ -38,6 +39,7 @@ function get_action_deferred_worker(){
     worker.fail(function(action, titles_blk_id, response) {
         _ = show_responsed_alert(response.msg) 
         _ = fill_statusbar(action, response.statusbar_tmpl)
+        _ = hide_act_btn_spinner()
         _ = change_action_btn("stop")
     })
   

@@ -18,7 +18,7 @@ function remade_alert(status, message) {
     var alert = $('#alert_block').find('.alert'), 
         status_colors = {'done': 'alert-success', 'info': 'alert-primary', 
                         'fail': 'alert-danger', 'warning': 'alert-warning'}
-    console.log(alert)
+    
     alert.removeClass(status_colors.info)
          .addClass(status_colors[status])
     alert.find('strong')

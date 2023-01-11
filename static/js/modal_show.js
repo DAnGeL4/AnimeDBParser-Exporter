@@ -12,7 +12,7 @@ function fill_modal(module_data) {
         modal_setup_button = $('#modal_setup_button'),
         cookie_input = $('#cookieInput')
   
-    select.value = module_data.data.selected_module
+    select.val(module_data.data.selected_module)
     modal_setup_button.attr( "data-bs-whatever", module_data.key )
     cookie_input.val(module_data.data.cookies)
 }

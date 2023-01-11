@@ -1,14 +1,14 @@
 //load first utils script
 
 function getStatus(selected_module, modal_stp_btn) { 
-    const action = modal_stp_btn.attr('data-bs-whatever'),
+    const module = modal_stp_btn.attr('data-bs-whatever'),
           cookies = $('#cookieInput').val()
     
     return $.ajax({
         type: 'POST',
         url: '/settingup',
         data: {
-            action: action,
+            module: module,
             selected_module: selected_module,
             cookies: cookies
         }

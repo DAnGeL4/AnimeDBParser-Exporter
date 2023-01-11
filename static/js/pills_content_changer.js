@@ -4,14 +4,17 @@ function _change_content(tab_data){
         action_button = pill_tab.find('#tab_action_button'),
         selected_module = pill_tab.find('#selected_module'),
         authorized_user = pill_tab.find('#authorized_user'),
-        accord_block = $('#accordion_progress')
+        accord_block = $('#accordion_progress'),
+        action_button_spinner = action_button.children('.spinner-border')
       
     pill_tab.attr("aria-labelledby", tab_data.tab_id)
     setup_button.attr("data-bs-whatever", tab_data.setup_btn_whatever)
   
     action_button.attr('name', tab_data.act_btn_val)
     action_button.val(tab_data.act_btn_val)
-    action_button.text(tab_data.act_btn_text)
+    action_button.text('')
+    action_button.append(action_button_spinner)
+    action_button.append(tab_data.act_btn_text)
   
     if (tab_data.auth_usr.length !== 0) {
         selected_module.val(tab_data.selected_mod)
