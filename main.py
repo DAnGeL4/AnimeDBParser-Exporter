@@ -9,6 +9,8 @@ from configs.connected_modules import EnabledModules
 from configs.connected_modules import ModuleAnimeBuffRu, ModuleAnimeGoOrg
 from modules.general.tools import OutputLogger
 from modules.general.main_tools import MainService
+
+import modules.flask.application as flask_app
 #--Finish imports block
 
 
@@ -53,8 +55,10 @@ def main() -> typ.NoReturn:
     #----
 
     m_serv = MainService()
-    _ = m_serv.processing_for_selected_module(selected_modules, 
-                                              selected_action)
+    #_ = m_serv.processing_for_selected_module(selected_modules, 
+    #                                          selected_action)
+
+    flask_app.run_app()
     
     return
         
