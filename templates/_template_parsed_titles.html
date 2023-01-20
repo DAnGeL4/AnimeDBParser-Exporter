@@ -1,5 +1,5 @@
 {# required variables -- [parsed_titles] #}
-{# optional variables -- [selected_tab] #}
+{# optional variables -- [session, selected_tab] #}
 
 {% set tab_id_template = 'parsed_menu_item_' %}
 {% set content_id_template = 'tab_parsed_' %}
@@ -9,16 +9,20 @@
     {% set _ = parsed_titles.pop(started_item) %}
 {% endif %}
 
+{% set saved_item = {'item': started_item} %}
+{% if session is defined %}
+    {% if saved_item.update({'item': session['parser']['selected_dropdown_tab']}) %}{% endif %}
+{% endif %}
+
 {% if selected_tab is defined %}
     {% if selected_tab is none %}
-        {% set selected_tab = started_item %}
+        {% set selected_tab = saved_item['item'] %}
     {% endif %}
 {% else %}
-    {% set selected_tab = started_item %}
+    {% set selected_tab = saved_item['item'] %}
 {% endif %}
 
 {% set items = parsed_titles.keys() | list %}
-
 {% if parsed_titles.update({started_item: {}}) %}{% endif %}
 {% for item in items %}
     {% if parsed_titles[started_item].update(parsed_titles[item]) %}

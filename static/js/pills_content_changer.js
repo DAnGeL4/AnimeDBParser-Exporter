@@ -25,47 +25,62 @@ function _change_content(tab_data){
     target_accord.removeClass('visually-hidden')
 }
 
+function _get_tab_data(tab_id, parser_data, exporter_data) {
+    var tabs_data = {
+        'pills-parser-tab': {
+            'tab_id': "pills-parser-tab",
+            'setup_btn_whatever': "parser",
+            'act_btn_val': "parse",
+            'act_btn_text': "Parse",
+            'selected_mod': parser_data['selected_module'],
+            'auth_usr': parser_data['username'],
+            'target_accord': 'parse_accordion_item'
+        },
+        'pills-exporter-tab': {
+            'tab_id': "pills-exporter-tab",
+            'setup_btn_whatever': "exporter",
+            'act_btn_val': "export",
+            'act_btn_text': "Export",
+            'selected_mod': exporter_data['selected_module'],
+            'auth_usr': exporter_data['username'],
+            'target_accord': 'export_accordion_item'
+            
+        }
+    }
+    return tabs_data[tab_id]
+}
+
+function _prepare_pill(selected_pill_id) {
+    var pill_tab = $('#pills-tab'),
+        selected_module = pill_tab.find('#selected_module'),
+        authorized_user = pill_tab.find('#authorized_user'),
+        other_accords = $('#accordion_progress .accordion-item:not(.visually-hidden)')
+
+    selected_module.val('[Not selected]')
+    authorized_user.val('[Not authorized]')
+    other_accords.addClass('visually-hidden')
+}
+
+function _change_pill_content(selected_pill_id, parser_data, exporter_data) {
+    _ = _prepare_pill(selected_pill_id)
+    tab_data = _get_tab_data(selected_pill_id, parser_data, exporter_data)
+    _ = _change_content(tab_data)
+}
+
 function pills_content_changer(parser_data, exporter_data){
     $(document).ready(function(){
-        $('#pills-tabs .nav-link').on('click', 
-                                      async function () {
-            var tabs_data = {
-                'pills-parser-tab': {
-                    'tab_id': "pills-parser-tab",
-                    'setup_btn_whatever': "parser",
-                    'act_btn_val': "parse",
-                    'act_btn_text': "Parse",
-                    'selected_mod': parser_data['selected_module'],
-                    'auth_usr': parser_data['username'],
-                    'target_accord': 'parse_accordion_item'
-                },
-                'pills-exporter-tab': {
-                    'tab_id': "pills-exporter-tab",
-                    'setup_btn_whatever': "exporter",
-                    'act_btn_val': "export",
-                    'act_btn_text': "Export",
-                    'selected_mod': exporter_data['selected_module'],
-                    'auth_usr': exporter_data['username'],
-                    'target_accord': 'export_accordion_item'
-                    
-                }
-            }
+        //initial filling
+        var selected_pill_id = $('#pills-tabs .active').attr('id')
+        _ = _change_pill_content(selected_pill_id, parser_data, exporter_data)
+        
+        $('#pills-tabs .nav-link').on(
+            'click', 
+            async function () {
+                //change animation delay
+                await sleep(100)
                                         
-            var selected_pill_id = $(this).attr('id')
-                pill_tab = $('#pills-tab'),
-                selected_module = pill_tab.find('#selected_module'),
-                authorized_user = pill_tab.find('#authorized_user'),
-                other_accords = $('#accordion_progress .accordion-item:not(.visually-hidden)')
-
-            await sleep(100)
-    
-            selected_module.val('[Not selected]')
-            authorized_user.val('[Not authorized]')
-            other_accords.addClass('visually-hidden')
-                                        
-            tab_data = tabs_data[selected_pill_id]
-            _change_content(tab_data)
-    
+                selected_pill_id = $(this).attr('id')
+                _ = _change_pill_content(selected_pill_id, parser_data, exporter_data)
         })
     })
 }
