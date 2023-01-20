@@ -18,6 +18,21 @@ app.config['SECRET_KEY'] = os.environ['flask_secret_key']
 
 
 #--Start functional block
+def check_session_keys():
+    for mod, fu in {'parser': app_service.get_race_list, 
+                    'exporter': app_service.get_gender_list
+                   }.items():
+        if mod not in session:
+            session[mod] = dict()
+            
+        for key in ['username', 'cookies']:
+            if key not in session[mod]:
+                session[mod][key] = ''
+              
+        if 'selected_module' not in session[mod]:
+            session[mod]['selected_module'] = fu()[0]
+  
+
 @app.route(routes['index'])
 def index() -> str:
     '''
@@ -32,16 +47,7 @@ def index() -> str:
         'export_modules': app_service.get_gender_list()
     })
 
-    session['parser'] = {
-        "selected_module": app_service.get_race_list()[0],
-        "username": "",
-        "cookies": "asdf"
-    }
-    session['exporter'] = {
-        "selected_module": app_service.get_gender_list()[0],
-        "username": "",
-        "cookies": "as"
-    }
+    check_session_keys()
     
     return render_template('index.html', 
                            settings=settings,
@@ -59,19 +65,11 @@ def settingup():
         session[action]['username'] = 'SomeUser'
         session[action]['cookies'] = cookies
       
-      
-        import time
-        time.sleep(4)
-      
     return jsonify({"answer": "Success",
                     "username": "SomeUser"})
 
 @app.route("/do", methods=["POST", "GET"])
 def do():
-    if request.method == "POST":
-        todo = request.form.get("todo")
-        print(todo)
-      
     return index()
   
 #--Finish functional block
