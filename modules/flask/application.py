@@ -5,8 +5,10 @@ import typing as typ
 from flask import Flask, render_template
 from flask import session, request, jsonify
 from flask_session import Session
+from jinja2 import Environment, FileSystemLoader
 
 #Custom imports
+from configs import settings as cfg
 from modules.flask.routes import routes
 from modules.flask import service as app_service
 #--Finish imports block
@@ -35,11 +37,58 @@ def check_session_keys():
         if 'selected_module' not in session[mod]:
             session[mod]['selected_module'] = fu()[0]
 
+def get_parsed_titles(counter):
+    parsed_titles = dict({
+        'watch': list(), 
+        'desired': list(), 
+        'viewed': list(), 
+        'abandone': list(), 
+        'favorites': list(), 
+        'delayed': list(), 
+        'reviewed': list(),
+        'errors': list()
+    })
+  
+    return parsed_titles
+
+def get_exported_titles():
+    exported_titles = dict({
+        'watch': list(), 
+        'desired': list(), 
+        'viewed': list(), 
+        'abandone': list(), 
+        'favorites': list(), 
+        'delayed': list(), 
+        'reviewed': list(),
+        'errors': list()
+    })
+    return exported_titles
+  
+def get_rendered_template(module, counter=None):
+    file_loader = FileSystemLoader(cfg.TEMPLATES_DIR)
+    env = Environment(loader=file_loader)
+    kwargs = dict({})
+  
+    if module == "parser":
+        template_file = "_template_parsed_titles.html"
+        kwargs = {'parsed_titles': get_parsed_titles(counter)}
+      
+    elif module == "exporter":
+        template_file = "_template_exported_titles.html"
+        kwargs = {'exported_titles': get_exported_titles()}
+        
+    template = env.get_template(template_file)
+    return template.render(**kwargs)
+
+
 @app.route(routes['index'])
 def index() -> str:
     '''
     '''
     _ = app_service.check_name_lists()
+  
+    parsed_titles = get_parsed_titles(4)
+    exported_titles = get_exported_titles()
     
     settings = dict({
         'parse_modules': app_service.get_race_list(),
@@ -50,8 +99,8 @@ def index() -> str:
     
     return render_template('index.html', 
                            settings=settings,
-                           parsed_titles={},
-                           exported_titles={})
+                           parsed_titles=parsed_titles,
+                           exported_titles=exported_titles)
 
 @app.route(routes['settingup'], methods=["POST", "GET"])
 def settingup():
@@ -63,7 +112,7 @@ def settingup():
         session[action]['selected_module'] = selected_module
         session[action]['username'] = 'SomeUser'
         session[action]['cookies'] = cookies
-      
+        
     return jsonify({"answer": "Success"})
 
 @app.route("/action", methods=["POST", "GET"])
@@ -88,7 +137,7 @@ def action():
             return jsonify(response)
             
         elif cmd == 'ask':
-            if session[module]['stopped'] or session[module]['ask_count'] > 3:
+            if session[module]['stopped']:
                 if session[module]['stopped']:
                     response.update({
                       'status': 'fail',
@@ -98,7 +147,7 @@ def action():
                     response.update({
                       'status': 'done',
                       'msg': 'Completed!',
-                      'title_tmpl': 'Complete'
+                      'title_tmpl': get_rendered_template(module)
                     })
                   
                 session[module].update({
@@ -108,14 +157,13 @@ def action():
               
             response.update({
               'status': 'processed',
-              'title_tmpl': 'Processed'
+              'title_tmpl': get_rendered_template(module)
             })
             return jsonify(response)
 
         elif cmd == "stop":
             session[module].update({
-                'stopped': True,
-                'ask_count': 0
+                'stopped': True
             })
             response.update({
               'status': 'done',
