@@ -1,6 +1,7 @@
 #--Start imports block
 #System imports
 import os
+import json
 import typing as typ
 from flask import Flask, render_template
 from flask import session, request, jsonify
@@ -37,47 +38,59 @@ def check_session_keys():
         if 'selected_module' not in session[mod]:
             session[mod]['selected_module'] = fu()[0]
 
-def get_parsed_titles(counter):
+def get_parsed_titles():
     parsed_titles = dict({
-        'watch': list(), 
-        'desired': list(), 
-        'viewed': list(), 
-        'abandone': list(), 
-        'favorites': list(), 
-        'delayed': list(), 
-        'reviewed': list(),
-        'errors': list()
+        'watch': dict(), 
+        'desired': dict(), 
+        'viewed': dict(), 
+        'abandone': dict(), 
+        'favorites': dict(), 
+        'delayed': dict(), 
+        'reviewed': dict(),
+        'errors': dict()
     })
-  
     return parsed_titles
 
 def get_exported_titles():
     exported_titles = dict({
-        'watch': list(), 
-        'desired': list(), 
-        'viewed': list(), 
-        'abandone': list(), 
-        'favorites': list(), 
-        'delayed': list(), 
-        'reviewed': list(),
-        'errors': list()
+        'watch': dict(), 
+        'desired': dict(), 
+        'viewed': dict(), 
+        'abandone': dict(), 
+        'favorites': dict(), 
+        'delayed': dict(), 
+        'reviewed': dict(),
+        'errors': dict()
     })
     return exported_titles
   
-def get_rendered_template(module, counter=None):
+def get_rendered_titles_list(module, selected_tab):
     file_loader = FileSystemLoader(cfg.TEMPLATES_DIR)
     env = Environment(loader=file_loader)
     kwargs = dict({})
   
     if module == "parser":
         template_file = "_template_parsed_titles.html"
-        kwargs = {'parsed_titles': get_parsed_titles(counter)}
+        kwargs = {'parsed_titles': get_parsed_titles(),
+                  'selected_tab': selected_tab}
       
     elif module == "exporter":
         template_file = "_template_exported_titles.html"
-        kwargs = {'exported_titles': get_exported_titles()}
+        kwargs = {'exported_titles': get_exported_titles(),
+                  'selected_tab': selected_tab}
         
     template = env.get_template(template_file)
+    return template.render(**kwargs)
+  
+def get_rendered_alert(status, message):
+    file_loader = FileSystemLoader(cfg.TEMPLATES_DIR)
+    env = Environment(loader=file_loader)
+    kwargs = {'status': status,
+              'message': message}
+  
+    template_file = "_template_alert_message.html"
+    template = env.get_template(template_file)
+  
     return template.render(**kwargs)
 
 
@@ -87,14 +100,38 @@ def index() -> str:
     '''
     _ = app_service.check_name_lists()
   
-    parsed_titles = get_parsed_titles(4)
+    parsed_titles = get_parsed_titles()
     exported_titles = get_exported_titles()
     
     settings = dict({
         'parse_modules': app_service.get_race_list(),
-        'export_modules': app_service.get_gender_list()
+        'export_modules': app_service.get_gender_list(),
+        'parser' : {
+            'progress': {
+                'status': True,
+                'all': {
+                    'now': 1, 
+                    'max': 201}, 
+                'current': {
+                    'watchlist': 'watch',
+                    'now': 1, 
+                    'max': 10}
+            }
+        },
+        'exporter': {
+            'progress': {
+                'status': False,
+                'all': {
+                    'now': 0, 
+                    'max': 0}, 
+                'current': {
+                    'watchlist': None,
+                    'now': 0, 
+                    'max': 0}
+            }
+        } 
     })
-
+    
     check_session_keys()
     
     return render_template('index.html', 
@@ -112,75 +149,86 @@ def settingup():
         session[action]['selected_module'] = selected_module
         session[action]['username'] = 'SomeUser'
         session[action]['cookies'] = cookies
-        
-    return jsonify({"answer": "Success"})
+      
+    return jsonify({"status": "done", 
+                    "msg": get_rendered_alert('done', 'User authorized.')})
 
 @app.route("/action", methods=["POST", "GET"])
 def action():
     act2mod = {'parse': 'parser', 
                'export': 'exporter'}
     response = {'status': '',
-                'msg': '', 
+                'msg': '',
                 'title_tmpl': '',
                 'statusbar_tmpl': ''}
   
     if request.method == "POST":
         action = request.form.get("action")
         cmd = request.form.get("cmd")
+        optional_args = json.loads(request.form.get("optional_args"))
 
         module = act2mod[action]
         if 'stopped' not in session[module]:
             session[module]['stopped'] = False
 
         if cmd == "start":
-            response['status'] = 'done'
+            response.update({
+              'status': 'done',
+              'msg': get_rendered_alert('info', 'Action started')
+            })
             return jsonify(response)
             
         elif cmd == 'ask':
+            selected_tab = optional_args['selected_tab']
+          
             if session[module]['stopped']:
                 if session[module]['stopped']:
                     response.update({
                       'status': 'fail',
-                      'msg': 'Action stopped!'
+                      'msg': get_rendered_alert('info', 'Action stopped.')
                     })
                 else:
                     response.update({
                       'status': 'done',
-                      'msg': 'Completed!',
-                      'title_tmpl': get_rendered_template(module)
+                      'msg': get_rendered_alert('done', 'Completed.'),
+                      'title_tmpl': 
+                          get_rendered_titles_list(module, selected_tab)
                     })
                   
                 session[module].update({
-                    'stopped': False
+                    'stopped': False,
+                    'ask_count': 0
                 })
+                print(f" after stopped: {session[module]['stopped']}")
                 return jsonify(response)
               
             response.update({
               'status': 'processed',
-              'title_tmpl': get_rendered_template(module)
+              'title_tmpl': get_rendered_titles_list(module, selected_tab)
             })
             return jsonify(response)
 
         elif cmd == "stop":
             session[module].update({
-                'stopped': True
+                'stopped': True,
+                'ask_count': 0
             })
             response.update({
               'status': 'done',
-              'msg': 'Action stopped!'
+              'msg': get_rendered_alert('info', 'Action stopped.')
             })
             return jsonify(response)
           
         else:
             response.update({
               'status': 'fail',
-              'msg': 'Unkwown command!'
+              'msg': get_rendered_alert('fail', 'Unkwown command.')
             })
             return jsonify(response)
 
     response.update({
       'status': 'fail',
-      'msg': 'Something went wrong!'
+      'msg': get_rendered_alert('fail', 'Something went wrong.')
     })
     return jsonify(response)
   
