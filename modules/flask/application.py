@@ -3,7 +3,7 @@
 import os
 import typing as typ
 from flask import Flask, render_template
-from flask import session
+from flask import session, request, jsonify
 
 #Custom imports
 from modules.flask.routes import routes
@@ -29,16 +29,49 @@ def index() -> str:
     
     settings = dict({
         'parse_modules': app_service.get_race_list(),
-        'export_modules': app_service.get_gender_list(),
+        'export_modules': app_service.get_gender_list()
     })
+
+    session['parser'] = {
+        "selected_module": app_service.get_race_list()[0],
+        "username": "",
+        "cookies": "asdf"
+    }
+    session['exporter'] = {
+        "selected_module": app_service.get_gender_list()[0],
+        "username": "",
+        "cookies": "as"
+    }
     
     return render_template('index.html', 
                            settings=settings,
                            parsed_titles=selected_names,
                            exported_titles=removed_names)
 
+@app.route(routes['settingup'], methods=["POST", "GET"])
+def settingup():
+    if request.method == "POST":
+        action = request.form.get("action")
+        selected_module = request.form.get("selected_module")
+        cookies = request.form.get("cookies")
+
+        session[action]['selected_module'] = selected_module
+        session[action]['username'] = 'SomeUser'
+        session[action]['cookies'] = cookies
+      
+      
+        import time
+        time.sleep(4)
+      
+    return jsonify({"answer": "Success",
+                    "username": "SomeUser"})
+
 @app.route("/do", methods=["POST", "GET"])
 def do():
+    if request.method == "POST":
+        todo = request.form.get("todo")
+        print(todo)
+      
     return index()
   
 #--Finish functional block
