@@ -6,10 +6,8 @@ import typing as typ
 from flask import Flask, render_template
 from flask import session, request, jsonify
 from flask_session import Session
-from jinja2 import Environment, FileSystemLoader
 
 #Custom imports
-from configs import settings as cfg
 from modules.flask.routes import routes
 from modules.flask import service as app_service
 #--Finish imports block
@@ -24,109 +22,14 @@ Session(app)
 
 
 #--Start functional block
-def check_session_keys():
-    for mod, fu in {'parser': app_service.get_race_list, 
-                    'exporter': app_service.get_gender_list
-                   }.items():
-        if mod not in session:
-            session[mod] = dict()
-            
-        for key in ['username', 'cookies']:
-            if key not in session[mod]:
-                session[mod][key] = ''
-              
-        if 'selected_module' not in session[mod]:
-            session[mod]['selected_module'] = fu()[0]
-
-def get_parsed_titles():
-    parsed_titles = dict({
-        'watch': dict(), 
-        'desired': dict(), 
-        'viewed': dict(), 
-        'abandone': dict(), 
-        'favorites': dict(), 
-        'delayed': dict(), 
-        'reviewed': dict(),
-        'errors': dict()
-    })
-    return parsed_titles
-
-def get_exported_titles():
-    exported_titles = dict({
-        'watch': dict(), 
-        'desired': dict(), 
-        'viewed': dict(), 
-        'abandone': dict(), 
-        'favorites': dict(), 
-        'delayed': dict(), 
-        'reviewed': dict(),
-        'errors': dict()
-    })
-    return exported_titles
-  
-def get_rendered_titles_list(module, selected_tab):
-    file_loader = FileSystemLoader(cfg.TEMPLATES_DIR)
-    env = Environment(loader=file_loader)
-    kwargs = dict({})
-  
-    if module == "parser":
-        template_file = "_template_parsed_titles.html"
-        kwargs = {'parsed_titles': get_parsed_titles(),
-                  'selected_tab': selected_tab}
-      
-    elif module == "exporter":
-        template_file = "_template_exported_titles.html"
-        kwargs = {'exported_titles': get_exported_titles(),
-                  'selected_tab': selected_tab}
-        
-    template = env.get_template(template_file)
-    return template.render(**kwargs)
-  
-def get_rendered_alert(status, message):
-    file_loader = FileSystemLoader(cfg.TEMPLATES_DIR)
-    env = Environment(loader=file_loader)
-    kwargs = {'status': status,
-              'message': message}
-  
-    template_file = "_template_alert_message.html"
-    template = env.get_template(template_file)
-  
-    return template.render(**kwargs)
-  
-def get_rendered_status_bar(action, counter=None):
-    file_loader = FileSystemLoader(cfg.TEMPLATES_DIR)
-    env = Environment(loader=file_loader)
-  
-    kwargs = {
-        'selected_tab': action,
-        'tab_key': action,
-        'expanded': True,
-        'progress': {
-            'status': True,
-            'all': {
-                'now': 0, 
-                'max': 0},
-            'current': {
-                'watchlist': 'watch',
-                'now': 0, 
-                'max': 0}
-        }
-    }
-  
-    template_file = "_template_progress_bar.html"
-    template = env.get_template(template_file)
-  
-    return template.render(**kwargs)
-
-
 @app.route(routes['index'])
 def index() -> str:
     '''
     '''
     _ = app_service.check_name_lists()
   
-    parsed_titles = get_parsed_titles()
-    exported_titles = get_exported_titles()
+    parsed_titles = app_service.get_parsed_titles(4)
+    exported_titles = app_service.get_exported_titles()
     
     settings = dict({
         'parse_modules': app_service.get_race_list(),
@@ -135,12 +38,12 @@ def index() -> str:
             'progress': {
                 'status': False,
                 'all': {
-                    'now': 1, 
-                    'max': 201}, 
+                    'now': 0, 
+                    'max': 0}, 
                 'current': {
-                    'watchlist': 'watch',
-                    'now': 1, 
-                    'max': 10}
+                    'watchlist': None,
+                    'now': 0, 
+                    'max': 0}
             }
         },
         'exporter': {
@@ -157,7 +60,7 @@ def index() -> str:
         } 
     })
     
-    check_session_keys()
+    app_service.check_session_keys()
     
     return render_template('index.html', 
                            settings=settings,
@@ -176,7 +79,7 @@ def settingup():
         session[action]['cookies'] = cookies
         
     return jsonify({"status": "done", 
-                    "msg": get_rendered_alert('done', 'User authorized.')})
+                    "msg": app_service.get_rendered_alert('done', 'User authorized.')})
 
 @app.route("/action", methods=["POST", "GET"])
 def action():
@@ -191,6 +94,11 @@ def action():
         action = request.form.get("action")
         cmd = request.form.get("cmd")
         optional_args = json.loads(request.form.get("optional_args"))
+        progress_xpnd: bool = optional_args['progress_xpnd']
+      
+        print(f"action: {action}")
+        print(f"cmd: {cmd}")
+        print(f"optional_args: {optional_args}")
 
         module = act2mod[action]
         if 'stopped' not in session[module]:
@@ -199,9 +107,9 @@ def action():
         if cmd == "start":
             response.update({
               'status': 'done',
-              'msg': get_rendered_alert('info', 'Action started'),
+              'msg': app_service.get_rendered_alert('info', 'Action started'),
               'statusbar_tmpl': 
-                  get_rendered_status_bar(action)
+                  app_service.get_rendered_status_bar(action, progress_xpnd)
             })
             return jsonify(response)
             
@@ -212,57 +120,55 @@ def action():
                 if session[module]['stopped']:
                     response.update({
                       'status': 'fail',
-                      'msg': get_rendered_alert('info', 'Action stopped.'),
+                      'msg': app_service.get_rendered_alert('info', 'Action stopped.'),
                       'statusbar_tmpl': 
-                          get_rendered_status_bar(action)
+                          app_service.get_rendered_status_bar(action, progress_xpnd)
                     })
                 else:
                     response.update({
                       'status': 'done',
-                      'msg': get_rendered_alert('done', 'Completed.'),
+                      'msg': app_service.get_rendered_alert('done', 'Completed.'),
                       'title_tmpl': 
-                          get_rendered_titles_list(module, selected_tab),
+                          app_service.get_rendered_titles_list(module, selected_tab),
                       'statusbar_tmpl': 
-                          get_rendered_status_bar(action)
+                          app_service.get_rendered_status_bar(action, progress_xpnd)
                     })
                   
                 session[module].update({
-                    'stopped': False,
-                    'ask_count': 0
+                    'stopped': False
                 })
                 return jsonify(response)
               
             response.update({
               'status': 'processed',
-              'title_tmpl': get_rendered_titles_list(module, selected_tab),
+              'title_tmpl': app_service.get_rendered_titles_list(module, selected_tab),
               'statusbar_tmpl': 
-                  get_rendered_status_bar(action)
+                  app_service.get_rendered_status_bar(action, progress_xpnd)
             })
             return jsonify(response)
 
         elif cmd == "stop":
             session[module].update({
-                'stopped': True,
-                'ask_count': 0
+                'stopped': True
             })
             response.update({
               'status': 'done',
-              'msg': get_rendered_alert('info', 'Action stopped.'),
+              'msg': app_service.get_rendered_alert('info', 'Action stopped.'),
               'statusbar_tmpl': 
-                  get_rendered_status_bar(action)
+                  app_service.get_rendered_status_bar(action, progress_xpnd)
             })
             return jsonify(response)
           
         else:
             response.update({
               'status': 'fail',
-              'msg': get_rendered_alert('fail', 'Unkwown command.')
+              'msg': app_service.get_rendered_alert('fail', 'Unkwown command.')
             })
             return jsonify(response)
 
     response.update({
       'status': 'fail',
-      'msg': get_rendered_alert('fail', 'Something went wrong.')
+      'msg': app_service.get_rendered_alert('fail', 'Something went wrong.')
     })
     return jsonify(response)
   
