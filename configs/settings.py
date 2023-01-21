@@ -5,9 +5,8 @@ import requests
 import cfscrape
 import typing as typ
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pydantic import AnyHttpUrl
-from dataclasses import asdict
 #--Finish imports block
 
 
@@ -56,6 +55,7 @@ REQUEST_PROXIES_FORMAT = {
 ROOT_DIRECTORY = os.getcwd()
 CONFIG_DIR = os.path.join(ROOT_DIRECTORY, "configs/")
 MODULES_DIR = os.path.join(ROOT_DIRECTORY, "modules/")
+TEMPLATES_DIR = os.path.join(ROOT_DIRECTORY, "templates/")
 VARIABLE_DIR = os.path.join(ROOT_DIRECTORY, 'var/')
 GLOBAL_LOG_DIR = os.path.join(VARIABLE_DIR, 'logs/')
 PROXY_LISTS_DIR = os.path.join(VARIABLE_DIR, "proxy_lists/")
@@ -82,7 +82,9 @@ ONLINE_PROXY_LISTS = dict({
 
 Response = requests.models.Response
 Session = cfscrape.CloudflareScraper
-WebPage = Response    
+WebPage = Response
+WebPagePart = Response
+HTMLTemplate = typ.Union[WebPage, WebPagePart]
 JSON = typ.Union[typ.Dict[str, typ.Any], typ.List[typ.Dict[str, typ.Any]]]
 Cookies = typ.AnyStr
 
@@ -122,6 +124,57 @@ class AnimeStatuses(Enum):
     AIRING = 'airing'
     FINISHED = 'finished'
     UPCOMING = 'upcoming'
+    
+
+class ServerAction(Enum):
+    '''Types of server actions.'''
+    PARSE = 'parse'
+    EXPORT = 'export'
+
+    
+class ActionModule(Enum):
+    '''Types of action modules.'''
+    PARSER = 'parser'
+    EXPORTER = 'exporter'
+
+
+class AjaxCommand(Enum):
+    '''
+    Types of commands transmitted 
+    from jQuery ajax.
+    '''
+    START = 'start'
+    ASK = 'ask'
+    STOP = 'stop'
+    DEFAULT = 'default'
+    
+
+class ResponseStatus(Enum):
+    '''Types of returned server statuses.'''
+    PROCESSED = 'processed'
+    DONE = 'done'
+    FAIL = 'fail'
+    INFO = 'info'
+    WARNING = 'warning'
+    EMPTY = ''
+
+
+@dataclass
+class AjaxServerResponse:
+    '''
+    Server response data type 
+    for jQuery ajax.
+    '''
+    status: ResponseStatus = ResponseStatus.EMPTY
+    msg: HTMLTemplate = str()
+    title_tmpl: HTMLTemplate = str()
+    statusbar_tmpl: HTMLTemplate = str()
+    
+    def asdict(self):
+        return {
+            k: v.value if hasattr(v, 'value') else v 
+            for k, v in asdict(self).items()
+        }
 
     
 @dataclass
@@ -136,7 +189,7 @@ class AnimeInfoType:
     year: int
     status: AnimeStatuses
 
-    def _asdict(self):
+    def asdict(self):
         return {k: v for k, v in asdict(self).items()}
 
 @dataclass
@@ -150,13 +203,18 @@ TitleDumpByKey = typ.Dict[str, TitleDump]
 AnimeByWatchList = typ.Dict[WatchListTypes, TitleDumpByKey]
 
 WatchListCompatibility = dict({
-    'watch': WatchListTypes.WATCH,
-    'desired': WatchListTypes.DESIRED,
-    'viewed': WatchListTypes.VIEWED,
-    'abandone': WatchListTypes.ABANDONE,
-    'favorites': WatchListTypes.FAVORITES,
-    'delayed': WatchListTypes.DELAYED,
-    'reviewed': WatchListTypes.REVIEWED
+    WatchListTypes.WATCH.value: WatchListTypes.WATCH,
+    WatchListTypes.DESIRED.value: WatchListTypes.DESIRED,
+    WatchListTypes.VIEWED.value: WatchListTypes.VIEWED,
+    WatchListTypes.ABANDONE.value: WatchListTypes.ABANDONE,
+    WatchListTypes.FAVORITES.value: WatchListTypes.FAVORITES,
+    WatchListTypes.DELAYED.value: WatchListTypes.DELAYED,
+    WatchListTypes.REVIEWED.value: WatchListTypes.REVIEWED
 })
+
+ActionModuleCompatibility = {
+    ServerAction.PARSE: ActionModule.PARSER, 
+    ServerAction.EXPORT: ActionModule.EXPORTER
+}
 
 #--Finish global constants block
