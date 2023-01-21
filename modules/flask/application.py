@@ -26,41 +26,11 @@ Session(app)
 def index() -> str:
     '''
     '''
-    _ = app_service.check_name_lists()
-  
+    _ = app_service.check_session_keys()
+    
+    settings = app_service.get_modules_settings()
     parsed_titles = app_service.get_parsed_titles(4)
     exported_titles = app_service.get_exported_titles()
-    
-    settings = dict({
-        'parse_modules': app_service.get_race_list(),
-        'export_modules': app_service.get_gender_list(),
-        'parser' : {
-            'progress': {
-                'status': False,
-                'all': {
-                    'now': 0, 
-                    'max': 0}, 
-                'current': {
-                    'watchlist': None,
-                    'now': 0, 
-                    'max': 0}
-            }
-        },
-        'exporter': {
-            'progress': {
-                'status': False,
-                'all': {
-                    'now': 0, 
-                    'max': 0}, 
-                'current': {
-                    'watchlist': None,
-                    'now': 0, 
-                    'max': 0}
-            }
-        } 
-    })
-    
-    app_service.check_session_keys()
     
     return render_template('index.html', 
                            settings=settings,
@@ -69,6 +39,8 @@ def index() -> str:
 
 @app.route(routes['settingup'], methods=["POST", "GET"])
 def settingup():
+    '''
+    '''
     if request.method == "POST":
         action = request.form.get("action")
         selected_module = request.form.get("selected_module")
@@ -81,96 +53,36 @@ def settingup():
     return jsonify({"status": "done", 
                     "msg": app_service.get_rendered_alert('done', 'User authorized.')})
 
-@app.route("/action", methods=["POST", "GET"])
+@app.route(routes['action'], methods=["POST", "GET"])
 def action():
-    act2mod = {'parse': 'parser', 
-               'export': 'exporter'}
-    response = {'status': '',
-                'msg': '',
-                'title_tmpl': '',
-                'statusbar_tmpl': ''}
-  
+    '''
+    '''
+    cmd_srv = app_service.CommandService()
+    action_module_compatibility = {
+        'parse': 'parser', 
+        'export': 'exporter'
+    }
+    comands_compatibility = {
+        'start': cmd_srv.start_action,
+        'ask': cmd_srv.ask_action,
+        'stop': cmd_srv.stop_action,
+        'default': cmd_srv.fail_unkwown_cmd
+    }
+    
     if request.method == "POST":
         action = request.form.get("action")
         cmd = request.form.get("cmd")
         optional_args = json.loads(request.form.get("optional_args"))
-        progress_xpnd: bool = optional_args['progress_xpnd']
-      
-        print(f"action: {action}")
-        print(f"cmd: {cmd}")
-        print(f"optional_args: {optional_args}")
+        module = action_module_compatibility[action]
+        
+        _ = app_service.check_ask_session_keys(module)
+        _ = cmd_srv.init_args(action, module, optional_args)
 
-        module = act2mod[action]
-        if 'stopped' not in session[module]:
-            session[module]['stopped'] = False
+        if cmd not in comands_compatibility:
+            cmd = 'default'
+        _ = comands_compatibility[cmd]()
 
-        if cmd == "start":
-            response.update({
-              'status': 'done',
-              'msg': app_service.get_rendered_alert('info', 'Action started'),
-              'statusbar_tmpl': 
-                  app_service.get_rendered_status_bar(action, progress_xpnd)
-            })
-            return jsonify(response)
-            
-        elif cmd == 'ask':
-            selected_tab = optional_args['selected_tab']
-          
-            if session[module]['stopped']:
-                if session[module]['stopped']:
-                    response.update({
-                      'status': 'fail',
-                      'msg': app_service.get_rendered_alert('info', 'Action stopped.'),
-                      'statusbar_tmpl': 
-                          app_service.get_rendered_status_bar(action, progress_xpnd)
-                    })
-                else:
-                    response.update({
-                      'status': 'done',
-                      'msg': app_service.get_rendered_alert('done', 'Completed.'),
-                      'title_tmpl': 
-                          app_service.get_rendered_titles_list(module, selected_tab),
-                      'statusbar_tmpl': 
-                          app_service.get_rendered_status_bar(action, progress_xpnd)
-                    })
-                  
-                session[module].update({
-                    'stopped': False
-                })
-                return jsonify(response)
-              
-            response.update({
-              'status': 'processed',
-              'title_tmpl': app_service.get_rendered_titles_list(module, selected_tab),
-              'statusbar_tmpl': 
-                  app_service.get_rendered_status_bar(action, progress_xpnd)
-            })
-            return jsonify(response)
-
-        elif cmd == "stop":
-            session[module].update({
-                'stopped': True
-            })
-            response.update({
-              'status': 'done',
-              'msg': app_service.get_rendered_alert('info', 'Action stopped.'),
-              'statusbar_tmpl': 
-                  app_service.get_rendered_status_bar(action, progress_xpnd)
-            })
-            return jsonify(response)
-          
-        else:
-            response.update({
-              'status': 'fail',
-              'msg': app_service.get_rendered_alert('fail', 'Unkwown command.')
-            })
-            return jsonify(response)
-
-    response.update({
-      'status': 'fail',
-      'msg': app_service.get_rendered_alert('fail', 'Something went wrong.')
-    })
-    return jsonify(response)
+    return jsonify(cmd_srv.get_response())
   
 #--Finish functional block
 
