@@ -92,6 +92,31 @@ def get_rendered_alert(status, message):
     template = env.get_template(template_file)
   
     return template.render(**kwargs)
+  
+def get_rendered_status_bar(action, counter=None):
+    file_loader = FileSystemLoader(cfg.TEMPLATES_DIR)
+    env = Environment(loader=file_loader)
+  
+    kwargs = {
+        'selected_tab': action,
+        'tab_key': action,
+        'expanded': True,
+        'progress': {
+            'status': True,
+            'all': {
+                'now': 0, 
+                'max': 0},
+            'current': {
+                'watchlist': 'watch',
+                'now': 0, 
+                'max': 0}
+        }
+    }
+  
+    template_file = "_template_progress_bar.html"
+    template = env.get_template(template_file)
+  
+    return template.render(**kwargs)
 
 
 @app.route(routes['index'])
@@ -108,7 +133,7 @@ def index() -> str:
         'export_modules': app_service.get_gender_list(),
         'parser' : {
             'progress': {
-                'status': True,
+                'status': False,
                 'all': {
                     'now': 1, 
                     'max': 201}, 
@@ -149,7 +174,7 @@ def settingup():
         session[action]['selected_module'] = selected_module
         session[action]['username'] = 'SomeUser'
         session[action]['cookies'] = cookies
-      
+        
     return jsonify({"status": "done", 
                     "msg": get_rendered_alert('done', 'User authorized.')})
 
@@ -174,7 +199,9 @@ def action():
         if cmd == "start":
             response.update({
               'status': 'done',
-              'msg': get_rendered_alert('info', 'Action started')
+              'msg': get_rendered_alert('info', 'Action started'),
+              'statusbar_tmpl': 
+                  get_rendered_status_bar(action)
             })
             return jsonify(response)
             
@@ -185,26 +212,31 @@ def action():
                 if session[module]['stopped']:
                     response.update({
                       'status': 'fail',
-                      'msg': get_rendered_alert('info', 'Action stopped.')
+                      'msg': get_rendered_alert('info', 'Action stopped.'),
+                      'statusbar_tmpl': 
+                          get_rendered_status_bar(action)
                     })
                 else:
                     response.update({
                       'status': 'done',
                       'msg': get_rendered_alert('done', 'Completed.'),
                       'title_tmpl': 
-                          get_rendered_titles_list(module, selected_tab)
+                          get_rendered_titles_list(module, selected_tab),
+                      'statusbar_tmpl': 
+                          get_rendered_status_bar(action)
                     })
                   
                 session[module].update({
                     'stopped': False,
                     'ask_count': 0
                 })
-                print(f" after stopped: {session[module]['stopped']}")
                 return jsonify(response)
               
             response.update({
               'status': 'processed',
-              'title_tmpl': get_rendered_titles_list(module, selected_tab)
+              'title_tmpl': get_rendered_titles_list(module, selected_tab),
+              'statusbar_tmpl': 
+                  get_rendered_status_bar(action)
             })
             return jsonify(response)
 
@@ -215,7 +247,9 @@ def action():
             })
             response.update({
               'status': 'done',
-              'msg': get_rendered_alert('info', 'Action stopped.')
+              'msg': get_rendered_alert('info', 'Action stopped.'),
+              'statusbar_tmpl': 
+                  get_rendered_status_bar(action)
             })
             return jsonify(response)
           
