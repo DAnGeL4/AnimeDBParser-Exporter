@@ -13,86 +13,88 @@ from configs import settings as cfg
 
 
 #--Start functional block
-def get_parse_modules() -> typ.List[str]:
+class DataService:
     '''
+    Contains methods for working 
+    with data for the flask app.
     '''
-    service = None
-    parse_modules = []
 
-    return parse_modules
+    def args_is_empty(self, args: typ.List[typ.Any]) -> bool:
+        '''
+        Returns the True if at least one of the arguments is empty.
+        '''
+        err = False
+        for arg in args:
+            err = True if arg is None else False
+        return err
 
+    def get_parse_modules(self) -> typ.List[str]:
+        '''
+        Returns modules avalible for parse action.
+        '''
+        service = None
+        parse_modules = []
+    
+        if not parse_modules:
+            parse_modules = ['parser1', 'parser2']
+    
+        return parse_modules
 
-def get_export_modules() -> typ.List[str]:
-    '''
-    '''
-    service = None
-    export_modules = []
-
-    return export_modules
-
-
-def get_modules_settings():
-    '''
-    '''
-    progress_tmpl = dict({
-        'status': False,
-        'all': {
-            'now': 0,
-            'max': 0
-        },
-        'current': {
-            'watchlist': None,
-            'now': 0,
-            'max': 0
-        }
-    })
-    settings = dict({
-        'parse_modules': get_parse_modules(),
-        'export_modules': get_export_modules(),
-        'parser': {
-            'progress': progress_tmpl
-        },
-        'exporter': {
-            'progress': progress_tmpl
-        }
-    })
-    return settings
-
-
-def get_parsed_titles(counter):
-    '''
-    '''
-    parsed_titles = dict({
-        'watch': dict(),
-        'desired': dict(),
-        'viewed': dict(),
-        'abandone': dict(),
-        'favorites': dict(),
-        'delayed': dict(),
-        'reviewed': dict(),
-        'errors': dict()
-    })
-
-    return parsed_titles
-
-
-def get_exported_titles():
-    '''
-    '''
-    exported_titles = dict({
-        'watch': dict(),
-        'desired': dict(),
-        'viewed': dict(),
-        'abandone': dict(),
-        'favorites': dict(),
-        'delayed': dict(),
-        'reviewed': dict(),
-        'errors': dict()
-    })
-
-    return exported_titles
-
-
+    def get_export_modules(self) -> typ.List[str]:
+        '''
+        Returns modules avalible for export action.
+        '''
+        service = None
+        export_modules = []
+    
+        if not export_modules:
+            export_modules = ['exporter1', 'exporter2']
+    
+        return export_modules
+    
+    def get_modules_settings(self) -> typ.Dict[str, dict]:
+        '''
+        Returns the settings for the module form.
+        '''
+        progress_tmpl = dict({
+            'status': False,
+            'all': {
+                'now': 0,
+                'max': 0
+            },
+            'current': {
+                'watchlist': None,
+                'now': 0,
+                'max': 0
+            }
+        })
+        settings = dict({
+            'parse_modules': self.get_parse_modules(),
+            'export_modules': self.get_export_modules(),
+            'parser': {
+                'progress': progress_tmpl
+            },
+            'exporter': {
+                'progress': progress_tmpl
+            }
+        })
+        return settings
+    
+    def get_parsed_titles(self) -> cfg.AnimeByWatchList:
+        '''
+        Returns a dump of the parsed titles.
+        '''
+        parsed_titles = cfg.ProcessedTitlesDump()
+        return parsed_titles.asdict()
+    
+    def get_exported_titles(self) -> cfg.AnimeByWatchList:
+        '''
+        Returns a dump of the exported titles.
+        '''
+        exported_titles = cfg.ProcessedTitlesDump()
+        return exported_titles.asdict()
+    
+    
 class SessionService:
     '''
     Contains methods for working with a flask session.
@@ -155,9 +157,10 @@ class SessionService:
         Checks whether the keys of html form 
         are kept in the flask session.
         '''
+        dt_srv = DataService()
         for module, f_get_data in {
-                cfg.ActionModule.PARSER: get_parse_modules,
-                cfg.ActionModule.EXPORTER: get_export_modules
+                cfg.ActionModule.PARSER: dt_srv.get_parse_modules,
+                cfg.ActionModule.EXPORTER: dt_srv.get_export_modules
         }.items():
 
             if module.value not in session:
@@ -309,18 +312,19 @@ class HTMLRenderingService:
         '''
         Returns the html template for the specified titles list.
         '''
+        dt_srv = DataService()
         kwargs_cases = dict({
             cfg.ActionModule.PARSER: {
                 'template_file': "_template_parsed_titles.html",
                 'kwargs': {
-                    'parsed_titles': get_parsed_titles(),
+                    'parsed_titles': dt_srv.get_parsed_titles(),
                     'selected_tab': selected_tab
                 }
             },
             cfg.ActionModule.EXPORTER: {
                 'template_file': "_template_exported_titles.html",
                 'kwargs': {
-                    'exported_titles': get_exported_titles(),
+                    'exported_titles': dt_srv.get_exported_titles(),
                     'selected_tab': selected_tab
                 }
             }
@@ -356,7 +360,7 @@ class HTMLRenderingService:
                     'max': 0
                 },
                 'current': {
-                    'watchlist': None,
+                    'watchlist': 'watch',
                     'now': 0,
                     'max': 0
                 }
@@ -469,7 +473,9 @@ class CommandService:
         self._response.msg = self._renderer.get_rendered_alert(
             cfg.ResponseStatus.INFO, 'Action started.')
         self._response.statusbar_tmpl = self._renderer.get_rendered_status_bar(
-            self._action, self._progress_xpnd, )
+            self._action, self._progress_xpnd)
+
+        #Some actions
 
     def _stop_action(self) -> typ.NoReturn:
         '''
@@ -486,6 +492,8 @@ class CommandService:
             cfg.ResponseStatus.INFO, 'Action stopped.')
         self._response.statusbar_tmpl = self._renderer.get_rendered_status_bar(
             self._action, self._progress_xpnd)
+
+        #Some actions
 
     def _ask_action(self) -> typ.NoReturn:
         '''
