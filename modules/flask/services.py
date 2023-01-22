@@ -196,6 +196,86 @@ class SessionService:
         session[self._module.value][self._user_cookies_key] = cookies
 
 
+class RequestService:
+    '''
+    Contains methods for working with requests.
+    '''
+
+    def method_is_post(self) -> bool:
+        '''
+        Checks if the request method is POST.
+        '''
+        return request.method == "POST"
+
+    def get_passed_action(self) -> typ.Union[cfg.ServerAction, None]:
+        '''
+        Returns the server action passed from jQuery ajax.
+        '''
+        action: str = request.form.get("action")
+        try:
+            action: cfg.ServerAction = cfg.ServerAction(action)
+        except:
+            action = None
+        return action
+
+    def get_passed_module(self) -> typ.Union[cfg.ActionModule, None]:
+        '''
+        Returns the action module passed from jQuery ajax.
+        '''
+        module: str = request.form.get("module")
+        try:
+            module: cfg.ActionModule = cfg.ActionModule(module)
+        except:
+            module = None
+        return module
+
+    def get_module_by_action(self,
+                             action: cfg.ServerAction
+                            ) -> typ.Union[cfg.ActionModule, None]:
+        '''
+        Returns the module in accordance with the transmitted action.
+        '''
+        module = None
+        try:
+            module = cfg.ActionModuleCompatibility[action]
+        except:
+            pass
+        return module
+
+    def get_passed_command(self) -> cfg.AjaxCommand:
+        '''
+        Returns the ajax command passed from jQuery ajax.
+        '''
+        cmd: str = request.form.get("cmd")
+        try:
+            cmd = cfg.AjaxCommand(cmd)
+        except:
+            cmd = cfg.AjaxCommand.DEFAULT
+        return cmd
+
+    def get_passed_selected_module(self) -> str:
+        '''
+        Returns the selected module passed from jQuery ajax.
+        '''
+        selected_module = request.form.get("selected_module")
+        return selected_module
+
+    def get_passed_cookies(self) -> typ.Union[str, cfg.Cookies, cfg.JSON]:
+        '''
+        Returns the user cookies passed from jQuery ajax.
+        '''
+        cookies = request.form.get("cookies")
+        return cookies
+
+    def get_passed_optional_args(self) -> cfg.JSON:
+        '''
+        Returns the optional args passed from jQuery ajax.
+        '''
+        optional_args = request.form.get("optional_args")
+        optional_args = json.loads(optional_args)
+        return optional_args
+
+
 class CommandService:
     '''
     Contains methods for working with server commands
