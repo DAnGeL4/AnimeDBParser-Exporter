@@ -13,9 +13,7 @@ from modules.flask import service as app_service
 
 #--Start global constants block
 app = Flask('app')
-app.config['SECRET_KEY'] = os.environ['flask_secret_key']
-app.config['SESSION_TYPE'] = 'filesystem'
-Session(app)
+sess = Session(app)
 #--Finish global constants block
 
 
@@ -27,11 +25,12 @@ def index() -> cfg.WebPage:
     '''
     _ = app_service.SessionService.check_common_keys()
     render_srv = app_service.HTMLRenderingService()
+    dt_srv = app_service.DataService()
 
     data = dict({
-        'settings': app_service.get_modules_settings(),
-        'parsed_titles': app_service.get_parsed_titles(4),         #tmp func arg
-        'exported_titles': app_service.get_exported_titles()
+        'settings': dt_srv.get_modules_settings(),
+        'parsed_titles': dt_srv.get_parsed_titles(),
+        'exported_titles': dt_srv.get_exported_titles()
     })
 
     return render_srv.get_initial_page(data)
@@ -52,29 +51,13 @@ def settingup() -> cfg.JSON:
         
         ss_srv = app_service.SessionService(module=module)
         _ = ss_srv.set_filled_settings(selected_module, cookies)
-
-        #Trying to authorize the user.
-        #Some actions
-        #---Temporary block
-        #delay imitaion
-        user = 'SomeUser'
-        import time
-        time.sleep(4)
-        #---
         
         response_obj = cfg.AjaxServerResponse()
         render_srv = app_service.HTMLRenderingService()
         
-        if True:  #Temporary solution. There should be a status check
-            _ = ss_srv.session_username = user
-            response_obj.status = cfg.ResponseStatus.DONE
-            response_obj.msg = render_srv.get_rendered_alert(
-                cfg.ResponseStatus.DONE, 'User authorized.')
-            
-        else:
-            response_obj.status = cfg.ResponseStatus.FAIL
-            response_obj.msg = render_srv.get_rendered_alert(
-                cfg.ResponseStatus.FAIL, 'The user is not authorized.')
+        response_obj.status = cfg.ResponseStatus.FAIL
+        response_obj.msg = render_srv.get_rendered_alert(
+            cfg.ResponseStatus.FAIL, 'The user is not authorized.')
 
     return jsonify(response_obj.asdict())
 
@@ -87,6 +70,7 @@ def action() -> cfg.JSON:
     '''
     cmd_srv = app_service.CommandService()
     req_srv = app_service.RequestService()
+    dt_srv = app_service.DataService()
     
     if req_srv.method_is_post():
         action = req_srv.get_passed_action()
@@ -94,10 +78,13 @@ def action() -> cfg.JSON:
         optional_args = req_srv.get_passed_optional_args()
         module = req_srv.get_module_by_action(action)
 
-        ss_srv = app_service.SessionService(module=module)
-        
-        _ = ss_srv.check_ask_cmd_keys()
-        _ = cmd_srv.init_args(action, module, optional_args)
+        if not dt_srv.args_is_empty([action, cmd, optional_args, module]):
+            ss_srv = app_service.SessionService(module=module)
+            _ = ss_srv.check_ask_cmd_keys()
+            _ = cmd_srv.init_args(action, module, optional_args)
+        else:
+            cmd = cfg.AjaxCommand.DEFAULT
+            
         _ = cmd_srv.run_command(cmd)
 
     return jsonify(cmd_srv.get_response())
@@ -111,7 +98,10 @@ def run_app() -> typ.NoReturn:
     '''
     Runs the flask application.
     '''
+    app.secret_key = os.environ['flask_secret_key']
+    app.config['SESSION_TYPE'] = 'filesystem'
+
+    sess.init_app(app)
+    
     app.run(host='0.0.0.0', port=8080)
-
-
 #--Finish main block
