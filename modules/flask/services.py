@@ -276,6 +276,97 @@ class RequestService:
         return optional_args
 
 
+class HTMLRenderingService:
+    '''
+    Contains methods for renderings of html templates.
+    '''
+
+    _environment: Environment = None
+    _initial_page: str = 'index.html'
+
+    def __init__(self,
+                 templates_dir: typ.Union[str, PathType] = cfg.TEMPLATES_DIR):
+        file_loader = FileSystemLoader(templates_dir)
+        self._environment = Environment(loader=file_loader)
+
+    def _get_rendered_template(self, file: typ.Union[str, PathType],
+                               kwargs: dict) -> cfg.WebPagePart:
+        '''
+        Returns the specified rendred html template.
+        '''
+        template = self._environment.get_template(file)
+        return template.render(**kwargs)
+
+    def get_initial_page(self, kwargs: dict) -> cfg.WebPage:
+        '''
+        Returns the primary web page.
+        '''
+        return render_template(self._initial_page, **kwargs)
+
+    def get_rendered_titles_list(self,
+                                 module: cfg.ActionModule,
+                                 selected_tab: str) -> cfg.WebPagePart:
+        '''
+        Returns the html template for the specified titles list.
+        '''
+        kwargs_cases = dict({
+            cfg.ActionModule.PARSER: {
+                'template_file': "_template_parsed_titles.html",
+                'kwargs': {
+                    'parsed_titles': get_parsed_titles(),
+                    'selected_tab': selected_tab
+                }
+            },
+            cfg.ActionModule.EXPORTER: {
+                'template_file': "_template_exported_titles.html",
+                'kwargs': {
+                    'exported_titles': get_exported_titles(),
+                    'selected_tab': selected_tab
+                }
+            }
+        })
+
+        template_file = kwargs_cases[module]['template_file']
+        kwargs = kwargs_cases[module]['kwargs']
+        return self._get_rendered_template(template_file, kwargs)
+
+    def get_rendered_alert(self, status: cfg.ResponseStatus,
+                           message: str) -> cfg.WebPagePart:
+        '''
+        Returns the html template of alert specified by the status.
+        '''
+        kwargs = {'status': status.value, 'message': message}
+        template_file = "_template_alert_message.html"
+        return self._get_rendered_template(template_file, kwargs)
+
+    def get_rendered_status_bar(self,
+                                action: cfg.ServerAction,
+                                progress_xpnd: bool) -> cfg.WebPagePart:
+        '''
+        Returns the html template of status bar with filled data.
+        '''
+        kwargs = {
+            'selected_tab': action.value,
+            'tab_key': action.value,
+            'expanded': progress_xpnd,
+            'progress': {
+                'status': True,
+                'all': {
+                    'now': 0,
+                    'max': 0
+                },
+                'current': {
+                    'watchlist': None,
+                    'now': 0,
+                    'max': 0
+                }
+            }
+        }
+
+        template_file = "_template_progress_bar.html"
+        return self._get_rendered_template(template_file, kwargs)
+
+
 class CommandService:
     '''
     Contains methods for working with server commands
@@ -288,6 +379,7 @@ class CommandService:
     _progress_xpnd: bool = None
     _selected_tab: str = None
     _optional_args: cfg.JSON = None
+    _renderer: HTMLRenderingService = None
 
     def init_args(self, action: cfg.ServerAction, module: cfg.ActionModule,
                   optional_args: dict) -> typ.NoReturn:
@@ -300,6 +392,7 @@ class CommandService:
         self._optional_args = optional_args
         self._progress_xpnd = self._optional_args['progress_xpnd']
         self._selected_tab = self._optional_args['selected_tab']
+        self._renderer = HTMLRenderingService()
 
     def _set_response_template(self) -> typ.NoReturn:
         '''
