@@ -5,7 +5,7 @@ import functools
 import typing as typ
 
 #Custom imports
-from configs.connected_modules import EnabledModules
+from configs.settings import ServerAction
 from configs.connected_modules import ModuleAnimeBuffRu, ModuleAnimeGoOrg
 from modules.general.tools import OutputLogger
 from modules.general.main_tools import MainService
@@ -44,19 +44,18 @@ def main() -> typ.NoReturn:
     #user select
     #temporary solution
     selected_modules = dict({
-        EnabledModules.parse.name: ModuleAnimeBuffRu(
+        ServerAction.PARSE: ModuleAnimeBuffRu(
             cookies=os.environ['animebuff_session_value']
         ),
-        EnabledModules.export.name: ModuleAnimeGoOrg(
+        ServerAction.EXPORT: ModuleAnimeGoOrg(
             cookies=os.environ['animego_REMEMBERME']
         )
     })
-    selected_action = EnabledModules.export
+    selected_action = ServerAction.EXPORT
     #----
 
     m_serv = MainService()
-    #_ = m_serv.processing_for_selected_module(selected_modules, 
-    #                                          selected_action)
+    #_ = m_serv.processing_for_selected_module(selected_action, selected_modules)
 
     flask_app.run_app()
     
