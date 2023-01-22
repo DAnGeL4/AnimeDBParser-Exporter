@@ -5,7 +5,7 @@ import requests
 import cfscrape
 import typing as typ
 from enum import Enum
-from dataclasses import dataclass, asdict
+import dataclasses as dcls
 from pydantic import AnyHttpUrl
 #--Finish imports block
 
@@ -159,7 +159,7 @@ class ResponseStatus(Enum):
     EMPTY = ''
 
 
-@dataclass
+@dcls.dataclass
 class AjaxServerResponse:
     '''
     Server response data type 
@@ -173,11 +173,11 @@ class AjaxServerResponse:
     def asdict(self):
         return {
             k: v.value if hasattr(v, 'value') else v 
-            for k, v in asdict(self).items()
+            for k, v in dcls.asdict(self).items()
         }
 
     
-@dataclass
+@dcls.dataclass
 class AnimeInfoType:
     '''Anime data type.'''
     poster: AnyHttpUrl
@@ -190,17 +190,29 @@ class AnimeInfoType:
     status: AnimeStatuses
 
     def asdict(self):
-        return {k: v for k, v in asdict(self).items()}
+        return {k: v for k, v in dcls.asdict(self).items()}
 
-@dataclass
+@dcls.dataclass
 class LinkedAnimeInfoType(AnimeInfoType):
     '''Anime data type with a link.'''
     link: AnyHttpUrl
 
 
 TitleDump: typ.Dict = AnimeInfoType
-TitleDumpByKey = typ.Dict[str, TitleDump]
+TitleDumpByKey = typ.Dict[str, LinkedAnimeInfoType]
 AnimeByWatchList = typ.Dict[WatchListTypes, TitleDumpByKey]
+
+
+# Creating a data type
+_fields = list([(wlist.value, TitleDumpByKey, dcls.field(default_factory=dict)) 
+               for wlist in WatchListTypes])
+_fields.append(('errors', TitleDumpByKey, dcls.field(default_factory=dict)))
+
+ProcessedTitlesDump: AnimeByWatchList = _build_processed_titles_dump_type(TitleDumpByKey, WatchListTypes)
+
+del _fields
+# End creating
+
 
 WatchListCompatibility = dict({
     WatchListTypes.WATCH.value: WatchListTypes.WATCH,
@@ -218,3 +230,33 @@ ActionModuleCompatibility = {
 }
 
 #--Finish global constants block
+
+
+#--Start functional block
+
+def _build_dataclass_type(name, fields, namespace):
+    dataclass_type = dcls.make_dataclass(name, fields, namespace=namespace)
+    return dataclass_type
+
+def _build_processed_titles_dump_namespace():
+    namespace={'asdict': lambda self: 
+               {k: v for k, v in dcls.asdict(self).items()}}
+    return namespace
+
+def _build_processed_titles_dump_fields():
+    fields = list([(wlist.value, TitleDumpByKey, 
+                    dcls.field(default_factory=dict)) 
+                   for wlist in WatchListTypes])
+    fields.append(('errors', TitleDumpByKey, 
+                   dcls.field(default_factory=dict)))
+    return fields
+
+def _build_processed_titles_dump_type(TitleDumpByKey, WatchListTypes):
+    name = 'ProcessedTitlesDump'
+    fields = _build_processed_titles_dump_fields()
+    namespace = _build_processed_titles_dump_namespace()
+    
+    dataclass_type = _build_dataclass_type(name, fields, namespace)
+    return dataclass_type
+
+#--Finish functional block
