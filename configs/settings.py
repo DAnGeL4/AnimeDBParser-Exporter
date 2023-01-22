@@ -7,6 +7,9 @@ import typing as typ
 from enum import Enum
 import dataclasses as dcls
 from pydantic import AnyHttpUrl
+
+#Custom imports
+from configs.factory import build_processed_titles_dump_type
 #--Finish imports block
 
 
@@ -14,40 +17,33 @@ from pydantic import AnyHttpUrl
 
 # Flags
 
-DOWNLOAD_PROXY_LISTS = bool(    False
-                                #True
-)
-CHECK_PROXIES = bool(           False
-                                #True
-)
-WRITE_LOG_TO_FILE = bool(       #False
-                                True
-)
-RELOAD_WEB_PAGES = bool(        False
-                                #True
-)
-UPDATE_JSON_DUMPS = bool(       False
-                                #True
-)
-USE_MULTITHREADS = bool(        #False
-                                True
-)
+DOWNLOAD_PROXY_LISTS = bool(False
+                            #True
+                            )
+CHECK_PROXIES = bool(False
+                     #True
+                     )
+WRITE_LOG_TO_FILE = bool(  #False
+    True)
+RELOAD_WEB_PAGES = bool(False
+                        #True
+                        )
+UPDATE_JSON_DUMPS = bool(False
+                         #True
+                         )
+USE_MULTITHREADS = bool(  #False
+    True)
 ENABLE_PARSING_MODULES = bool(  #False
-                                True
-)
-ENABLE_EXPORTER_MODULES = bool( #False
-                                True
-)
+    True)
+ENABLE_EXPORTER_MODULES = bool(  #False
+    True)
 
 # Web Protocols
 
-PROXY_PROTOCOLS = dict({
-    "socks4": "socks4",
-    "socks5": "socks5"
-})
+PROXY_PROTOCOLS = dict({"socks4": "socks4", "socks5": "socks5"})
 REQUEST_PROXIES_FORMAT = {
-    "http": None,            #used socks proxy
-    "https": None            #used socks proxy
+    "http": None,  #used socks proxy
+    "https": None  #used socks proxy
 }
 
 # Files and Directories
@@ -72,10 +68,10 @@ LOCAL_PROXY_FILES = dict({
 # Online Files
 
 ONLINE_PROXY_LISTS = dict({
-    LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks4"]]: 
-        "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt",
-    LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks5"]]: 
-        "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
+    LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks4"]]:
+    "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt",
+    LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks5"]]:
+    "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
 })
 
 # Types
@@ -87,6 +83,7 @@ WebPagePart = Response
 HTMLTemplate = typ.Union[WebPage, WebPagePart]
 JSON = typ.Union[typ.Dict[str, typ.Any], typ.List[typ.Dict[str, typ.Any]]]
 Cookies = typ.AnyStr
+
 
 class RequestMethods(Enum):
     '''Contains types of HTTP requesting methods.'''
@@ -109,6 +106,7 @@ class WatchListTypes(Enum):
     DELAYED = "delayed"
     REVIEWED = "reviewed"
 
+
 class AnimeTypes(Enum):
     '''Types of anime.'''
     TV = 'tv-serial'
@@ -124,14 +122,14 @@ class AnimeStatuses(Enum):
     AIRING = 'airing'
     FINISHED = 'finished'
     UPCOMING = 'upcoming'
-    
+
 
 class ServerAction(Enum):
     '''Types of server actions.'''
     PARSE = 'parse'
     EXPORT = 'export'
 
-    
+
 class ActionModule(Enum):
     '''Types of action modules.'''
     PARSER = 'parser'
@@ -147,7 +145,7 @@ class AjaxCommand(Enum):
     ASK = 'ask'
     STOP = 'stop'
     DEFAULT = 'default'
-    
+
 
 class ResponseStatus(Enum):
     '''Types of returned server statuses.'''
@@ -169,14 +167,14 @@ class AjaxServerResponse:
     msg: HTMLTemplate = str()
     title_tmpl: HTMLTemplate = str()
     statusbar_tmpl: HTMLTemplate = str()
-    
+
     def asdict(self):
         return {
-            k: v.value if hasattr(v, 'value') else v 
+            k: v.value if hasattr(v, 'value') else v
             for k, v in dcls.asdict(self).items()
         }
 
-    
+
 @dcls.dataclass
 class AnimeInfoType:
     '''Anime data type.'''
@@ -192,6 +190,7 @@ class AnimeInfoType:
     def asdict(self):
         return {k: v for k, v in dcls.asdict(self).items()}
 
+
 @dcls.dataclass
 class LinkedAnimeInfoType(AnimeInfoType):
     '''Anime data type with a link.'''
@@ -202,61 +201,29 @@ TitleDump: typ.Dict = AnimeInfoType
 TitleDumpByKey = typ.Dict[str, LinkedAnimeInfoType]
 AnimeByWatchList = typ.Dict[WatchListTypes, TitleDumpByKey]
 
-
-# Creating a data type
-_fields = list([(wlist.value, TitleDumpByKey, dcls.field(default_factory=dict)) 
-               for wlist in WatchListTypes])
-_fields.append(('errors', TitleDumpByKey, dcls.field(default_factory=dict)))
-
-ProcessedTitlesDump: AnimeByWatchList = _build_processed_titles_dump_type(TitleDumpByKey, WatchListTypes)
-
-del _fields
-# End creating
-
+ProcessedTitlesDump: AnimeByWatchList = build_processed_titles_dump_type(
+    TitleDumpByKey, WatchListTypes)
 
 WatchListCompatibility = dict({
-    WatchListTypes.WATCH.value: WatchListTypes.WATCH,
-    WatchListTypes.DESIRED.value: WatchListTypes.DESIRED,
-    WatchListTypes.VIEWED.value: WatchListTypes.VIEWED,
-    WatchListTypes.ABANDONE.value: WatchListTypes.ABANDONE,
-    WatchListTypes.FAVORITES.value: WatchListTypes.FAVORITES,
-    WatchListTypes.DELAYED.value: WatchListTypes.DELAYED,
-    WatchListTypes.REVIEWED.value: WatchListTypes.REVIEWED
+    WatchListTypes.WATCH.value:
+    WatchListTypes.WATCH,
+    WatchListTypes.DESIRED.value:
+    WatchListTypes.DESIRED,
+    WatchListTypes.VIEWED.value:
+    WatchListTypes.VIEWED,
+    WatchListTypes.ABANDONE.value:
+    WatchListTypes.ABANDONE,
+    WatchListTypes.FAVORITES.value:
+    WatchListTypes.FAVORITES,
+    WatchListTypes.DELAYED.value:
+    WatchListTypes.DELAYED,
+    WatchListTypes.REVIEWED.value:
+    WatchListTypes.REVIEWED
 })
 
 ActionModuleCompatibility = {
-    ServerAction.PARSE: ActionModule.PARSER, 
+    ServerAction.PARSE: ActionModule.PARSER,
     ServerAction.EXPORT: ActionModule.EXPORTER
 }
 
 #--Finish global constants block
-
-
-#--Start functional block
-
-def _build_dataclass_type(name, fields, namespace):
-    dataclass_type = dcls.make_dataclass(name, fields, namespace=namespace)
-    return dataclass_type
-
-def _build_processed_titles_dump_namespace():
-    namespace={'asdict': lambda self: 
-               {k: v for k, v in dcls.asdict(self).items()}}
-    return namespace
-
-def _build_processed_titles_dump_fields():
-    fields = list([(wlist.value, TitleDumpByKey, 
-                    dcls.field(default_factory=dict)) 
-                   for wlist in WatchListTypes])
-    fields.append(('errors', TitleDumpByKey, 
-                   dcls.field(default_factory=dict)))
-    return fields
-
-def _build_processed_titles_dump_type(TitleDumpByKey, WatchListTypes):
-    name = 'ProcessedTitlesDump'
-    fields = _build_processed_titles_dump_fields()
-    namespace = _build_processed_titles_dump_namespace()
-    
-    dataclass_type = _build_dataclass_type(name, fields, namespace)
-    return dataclass_type
-
-#--Finish functional block
