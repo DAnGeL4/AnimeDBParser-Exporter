@@ -7,9 +7,11 @@ import typing as typ
 from enum import Enum
 import dataclasses as dcls
 from pydantic import AnyHttpUrl
+from flask_session import Session
+from pathlib import Path
 
 #Custom imports
-from configs.factory import build_processed_titles_dump_type
+from configs.factory import DataclassTypeFactory
 #--Finish imports block
 
 
@@ -17,26 +19,30 @@ from configs.factory import build_processed_titles_dump_type
 
 # Flags
 
-DOWNLOAD_PROXY_LISTS = bool(False
-                            #True
-                            )
-CHECK_PROXIES = bool(False
-                     #True
-                     )
-WRITE_LOG_TO_FILE = bool(  #False
-    True)
-RELOAD_WEB_PAGES = bool(False
-                        #True
-                        )
-UPDATE_JSON_DUMPS = bool(False
-                         #True
-                         )
-USE_MULTITHREADS = bool(  #False
-    True)
+DOWNLOAD_PROXY_LISTS = bool(    False
+                                #True
+)
+CHECK_PROXIES = bool(           False
+                                #True
+)
+WRITE_LOG_TO_FILE = bool(       #False
+                                True
+)
+RELOAD_WEB_PAGES = bool(        False
+                                #True
+)
+UPDATE_JSON_DUMPS = bool(       False
+                                #True
+)
+USE_MULTITHREADS = bool(        #False
+                                True
+)
 ENABLE_PARSING_MODULES = bool(  #False
-    True)
-ENABLE_EXPORTER_MODULES = bool(  #False
-    True)
+                                True
+)
+ENABLE_EXPORTER_MODULES = bool( #False
+                                True
+)
 
 # Web Protocols
 
@@ -48,15 +54,17 @@ REQUEST_PROXIES_FORMAT = {
 
 # Files and Directories
 
-ROOT_DIRECTORY = os.getcwd()
-CONFIG_DIR = os.path.join(ROOT_DIRECTORY, "configs/")
-MODULES_DIR = os.path.join(ROOT_DIRECTORY, "modules/")
-TEMPLATES_DIR = os.path.join(ROOT_DIRECTORY, "templates/")
-VARIABLE_DIR = os.path.join(ROOT_DIRECTORY, 'var/')
-GLOBAL_LOG_DIR = os.path.join(VARIABLE_DIR, 'logs/')
-PROXY_LISTS_DIR = os.path.join(VARIABLE_DIR, "proxy_lists/")
-WEB_PAGES_DIR = os.path.join(VARIABLE_DIR, "web_pages/")
-JSON_DUMPS_DIR = os.path.join(VARIABLE_DIR, "json_dumps/")
+ROOT_DIRECTORY: Path = os.getcwd()
+CONFIG_DIR: Path = os.path.join(ROOT_DIRECTORY, "configs/")
+MODULES_DIR: Path = os.path.join(ROOT_DIRECTORY, "modules/")
+TEMPLATES_DIR: Path = os.path.join(ROOT_DIRECTORY, "templates/")
+VARIABLE_DIR: Path = os.path.join(ROOT_DIRECTORY, 'var/')
+GLOBAL_LOG_DIR: Path = os.path.join(VARIABLE_DIR, 'logs/')
+PROXY_LISTS_DIR: Path = os.path.join(VARIABLE_DIR, "proxy_lists/")
+WEB_PAGES_DIR: Path = os.path.join(VARIABLE_DIR, "web_pages/")
+JSON_DUMPS_DIR: Path = os.path.join(VARIABLE_DIR, "json_dumps/")
+FLASK_SESSION_FILE_DIR: Path = os.path.join(VARIABLE_DIR, "flask_session/")
+FLASK_CACHE_DIR: Path = os.path.join(VARIABLE_DIR, "flask_cache/")
 
 CORRECT_PROXIES_FILE = os.path.join(PROXY_LISTS_DIR, "correct_proxies")
 GLOBAL_LOG_FILE = os.path.join(GLOBAL_LOG_DIR, 'general_log.log')
@@ -75,9 +83,10 @@ ONLINE_PROXY_LISTS = dict({
 })
 
 # Types
+tp_fc = DataclassTypeFactory()
 
 Response = requests.models.Response
-Session = cfscrape.CloudflareScraper
+Session = typ.Union[cfscrape.CloudflareScraper, Session]
 WebPage = Response
 WebPagePart = Response
 HTMLTemplate = typ.Union[WebPage, WebPagePart]
@@ -85,7 +94,7 @@ JSON = typ.Union[typ.Dict[str, typ.Any], typ.List[typ.Dict[str, typ.Any]]]
 Cookies = typ.AnyStr
 
 
-class RequestMethods(Enum):
+class RequestMethod(Enum):
     '''Contains types of HTTP requesting methods.'''
     GET = "GET"
     POST = "POST"
@@ -96,7 +105,7 @@ class RequestMethods(Enum):
     OPTIONS = "OPTIONS"
 
 
-class WatchListTypes(Enum):
+class WatchListType(Enum):
     '''Contains types of watchlists.'''
     WATCH = "watch"
     DESIRED = "desired"
@@ -107,7 +116,7 @@ class WatchListTypes(Enum):
     REVIEWED = "reviewed"
 
 
-class AnimeTypes(Enum):
+class AnimeType(Enum):
     '''Types of anime.'''
     TV = 'tv-serial'
     OVA = 'ova'
@@ -117,7 +126,7 @@ class AnimeTypes(Enum):
     CLIP = 'clip'
 
 
-class AnimeStatuses(Enum):
+class AnimeStatuse(Enum):
     '''Types of anime statuses.'''
     AIRING = 'airing'
     FINISHED = 'finished'
@@ -182,10 +191,10 @@ class AnimeInfoType:
     name: str
     original_name: str
     other_names: typ.List[str]
-    type: AnimeTypes
+    type: AnimeType
     ep_count: typ.Union[int, None]
     year: int
-    status: AnimeStatuses
+    status: AnimeStatuse
 
     def asdict(self):
         return {k: v for k, v in dcls.asdict(self).items()}
@@ -199,27 +208,15 @@ class LinkedAnimeInfoType(AnimeInfoType):
 
 TitleDump: typ.Dict = AnimeInfoType
 TitleDumpByKey = typ.Dict[str, LinkedAnimeInfoType]
-AnimeByWatchList = typ.Dict[WatchListTypes, TitleDumpByKey]
+AnimeByWatchList = typ.Dict[WatchListType, TitleDumpByKey]
 
-ProcessedTitlesDump: AnimeByWatchList = build_processed_titles_dump_type(
-    TitleDumpByKey, WatchListTypes)
-
-WatchListCompatibility = dict({
-    WatchListTypes.WATCH.value:
-    WatchListTypes.WATCH,
-    WatchListTypes.DESIRED.value:
-    WatchListTypes.DESIRED,
-    WatchListTypes.VIEWED.value:
-    WatchListTypes.VIEWED,
-    WatchListTypes.ABANDONE.value:
-    WatchListTypes.ABANDONE,
-    WatchListTypes.FAVORITES.value:
-    WatchListTypes.FAVORITES,
-    WatchListTypes.DELAYED.value:
-    WatchListTypes.DELAYED,
-    WatchListTypes.REVIEWED.value:
-    WatchListTypes.REVIEWED
-})
+ProcessedTitlesDump: typ.Union[str, 
+    AnimeByWatchList] = tp_fc.build_dataclass_type(
+        name='ProcessedTitlesDump',
+        fields_types=[TitleDumpByKey] * 8,     #len(fields_container), 
+        fields_container=list(WatchListType) + ['errors'], 
+        functions=['asdict']
+    )
 
 ActionModuleCompatibility = {
     ServerAction.PARSE: ActionModule.PARSER,
