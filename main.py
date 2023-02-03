@@ -37,9 +37,41 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
 
 
 #--Start main block
+
+import subprocess
+
+def run_setup_script(setup_file) -> typ.NoReturn:
+    '''
+    Checking the dependencies and external ip for atlas mongodb.
+    '''
+    answer_values = subprocess.check_output([setup_file])
+    answer_values = answer_values.decode('utf-8')
+
+    answers = answer_values.split('\n')
+    for answer in answers:
+        print(answer)
+
+    status = answers[-2].split(' ')[-1]
+    return status
+
+def prepare_redis_server():
+    '''
+    '''
+    redis_setup_sh_file = "./sh_scripts/redis_up.sh"
+    res = run_setup_script(redis_setup_sh_file)
+    
+    if res != "DONE": 
+        print("ERROR. Failed to start Redis.")
+        return False
+    return True
+    
+    
 @basic_output
 def main() -> typ.NoReturn:
     '''Entry point.'''
+
+    res = prepare_redis_server()
+    if not res: return
 
     #user select
     #temporary solution

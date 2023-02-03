@@ -1,5 +1,6 @@
 { pkgs }: {
   deps = [
+    pkgs.redis
     pkgs.python38Full
   ];
   env = {
