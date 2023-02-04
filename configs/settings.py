@@ -6,54 +6,77 @@ import cfscrape
 import typing as typ
 from enum import Enum
 import dataclasses as dcls
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, Protocol, HttpUrl
 from flask_session import Session
 from pathlib import Path
 
 #Custom imports
-from configs.factory import DataclassTypeFactory
+from lib.factory import DataclassTypeFactory
 #--Finish imports block
-
 
 #--Start global constants block
 
 # Flags
+#---
+DOWNLOAD_PROXY_LISTS: bool = bool(
+    False
+    #True
+)
+CHECK_PROXIES: bool = bool(
+    False
+    #True
+)
+WRITE_LOG_TO_FILE: bool = bool(
+    #False
+    True
+)
+RELOAD_WEB_PAGES: bool = bool(
+    False
+    #True
+)
+UPDATE_JSON_DUMPS: bool = bool(
+    False
+    #True
+)
+USE_MULTITHREADS: bool = bool(  
+    #False
+    True
+)
+ENABLE_PARSING_MODULES: bool = bool(
+    #False
+    True
+)
+ENABLE_EXPORTER_MODULES: bool = bool(
+    #False
+    True
+)
+#---
 
-DOWNLOAD_PROXY_LISTS = bool(    False
-                                #True
-)
-CHECK_PROXIES = bool(           False
-                                #True
-)
-WRITE_LOG_TO_FILE = bool(       #False
-                                True
-)
-RELOAD_WEB_PAGES = bool(        False
-                                #True
-)
-UPDATE_JSON_DUMPS = bool(       False
-                                #True
-)
-USE_MULTITHREADS = bool(        #False
-                                True
-)
-ENABLE_PARSING_MODULES = bool(  #False
-                                True
-)
-ENABLE_EXPORTER_MODULES = bool( #False
-                                True
-)
+# Common names
+#---
+FLASK_APPLICATION_NAME: str = "CIE"
+#---
 
 # Web Protocols
-
-PROXY_PROTOCOLS = dict({"socks4": "socks4", "socks5": "socks5"})
-REQUEST_PROXIES_FORMAT = {
+#---
+PROXY_PROTOCOLS: typ.Dict[str, Protocol] = dict({
+    "socks4": "socks4",
+    "socks5": "socks5"
+})
+REQUEST_PROXIES_FORMAT: typ.Dict[Protocol, AnyHttpUrl] = {
     "http": None,  #used socks proxy
     "https": None  #used socks proxy
 }
+#---
+
+# URLs
+#---
+CELERY_BROKER_URL: AnyHttpUrl = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND: AnyHttpUrl = 'redis://localhost:6379'
+#---
 
 # Files and Directories
-
+#---
 ROOT_DIRECTORY: Path = os.getcwd()
 CONFIG_DIR: Path = os.path.join(ROOT_DIRECTORY, "configs/")
 MODULES_DIR: Path = os.path.join(ROOT_DIRECTORY, "modules/")
@@ -66,23 +89,26 @@ JSON_DUMPS_DIR: Path = os.path.join(VARIABLE_DIR, "json_dumps/")
 FLASK_SESSION_FILE_DIR: Path = os.path.join(VARIABLE_DIR, "flask_session/")
 FLASK_CACHE_DIR: Path = os.path.join(VARIABLE_DIR, "flask_cache/")
 
-CORRECT_PROXIES_FILE = os.path.join(PROXY_LISTS_DIR, "correct_proxies")
-GLOBAL_LOG_FILE = os.path.join(GLOBAL_LOG_DIR, 'general_log.log')
-LOCAL_PROXY_FILES = dict({
+CORRECT_PROXIES_FILE: Path = os.path.join(PROXY_LISTS_DIR, "correct_proxies")
+GLOBAL_LOG_FILE: Path = os.path.join(GLOBAL_LOG_DIR, 'general_log.log')
+LOCAL_PROXY_FILES: typ.Dict[Protocol, str] = dict({
     PROXY_PROTOCOLS["socks4"]: "proxy_socks4",
     PROXY_PROTOCOLS["socks5"]: "proxy_socks5",
 })
+#---
 
 # Online Files
-
-ONLINE_PROXY_LISTS = dict({
+#---
+ONLINE_PROXY_LISTS: typ.Dict[str, HttpUrl] = dict({
     LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks4"]]:
     "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt",
     LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks5"]]:
     "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
 })
+#---
 
 # Types
+#---
 tp_fc = DataclassTypeFactory()
 
 Response = requests.models.Response
@@ -210,17 +236,22 @@ TitleDump: typ.Dict = AnimeInfoType
 TitleDumpByKey = typ.Dict[str, LinkedAnimeInfoType]
 AnimeByWatchList = typ.Dict[WatchListType, TitleDumpByKey]
 
-ProcessedTitlesDump: typ.Union[str, 
-    AnimeByWatchList] = tp_fc.build_dataclass_type(
-        name='ProcessedTitlesDump',
-        fields_types=[TitleDumpByKey] * 8,     #len(fields_container), 
-        fields_container=list(WatchListType) + ['errors'], 
-        functions=['asdict']
-    )
+ProcessedTitlesDump: typ.Union[str,
+                               AnimeByWatchList] = tp_fc.build_dataclass_type(
+                                   name='ProcessedTitlesDump',
+                                   fields_types=[TitleDumpByKey] *
+                                   8,  #len(fields_container), 
+                                   fields_container=list(WatchListType) +
+                                   ['errors'],
+                                   functions=['asdict'])
+#---
 
-ActionModuleCompatibility = {
+# Compatibility tables
+#---
+ActionModuleCompatibility: typ.Dict[ServerAction, ActionModule] = {
     ServerAction.PARSE: ActionModule.PARSER,
     ServerAction.EXPORT: ActionModule.EXPORTER
 }
+#---
 
 #--Finish global constants block
