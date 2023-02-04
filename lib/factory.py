@@ -2,6 +2,8 @@
 #System imports
 import typing as typ
 import dataclasses as dcls
+from flask import Flask
+from celery import Celery
 from collections import Iterable
 
 #Custom imports
@@ -88,3 +90,23 @@ class DataclassTypeFactory:
 
     __enabled_namespace_builders: typ.Dict[str, typ.Callable] = dict(
         {'asdict': _build_namespace_asdict})
+
+
+class CeleryFactory:
+
+    @classmethod
+    def make_celery(cls, app: Flask) -> Celery:
+        celery = Celery(
+            app.import_name,
+            backend=app.config['CELERY_RESULT_BACKEND'],
+            broker=app.config['CELERY_BROKER_URL']
+        )
+        celery.conf.update(app.config)
+    
+        class ContextTask(celery.Task):
+            def __call__(self, *args, **kwargs):
+                with app.app_context():
+                    return self.run(*args, **kwargs)
+    
+        celery.Task = ContextTask
+        return celery
