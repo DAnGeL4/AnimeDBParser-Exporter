@@ -8,7 +8,7 @@ wait $!
 mv redis.conf "$(pwd)/configs"
 
 # starting Redis
-(redis-server ./configs/redis.conf --bind 127.0.0.1 &)
+(redis-server "$(pwd)/configs/redis.conf" --bind 127.0.0.1 &)
 for (( i=0; i<5; ++i )); do
     if [ "$(redis-cli ping 2>/dev/null)" = "PONG" ]; then break; fi
     sleep 1;
@@ -22,4 +22,11 @@ redis-cli SHUTDOWN SAVE
 
 # making an executable Redis startup script
 chmod u+x "$(pwd)/sh_scripts/redis_up.sh"
+#---
+
+
+# configuring Celery
+#---
+# making an executable Celery startup script
+chmod u+x "$(pwd)/sh_scripts/celery_worker_up.sh"
 #---
