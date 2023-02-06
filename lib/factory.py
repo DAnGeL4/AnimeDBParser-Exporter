@@ -1,10 +1,15 @@
 #--Start imports block
 #System imports
+import os
 import typing as typ
 import dataclasses as dcls
+from pathlib import Path
 from flask import Flask
+from flask_session import Session
+from flask_caching import Cache
 from celery import Celery
 from collections import Iterable
+from pydantic import AnyHttpUrl
 
 #Custom imports
 #--Finish imports block
@@ -92,21 +97,66 @@ class DataclassTypeFactory:
         {'asdict': _build_namespace_asdict})
 
 
-class CeleryFactory:
+class FlaskFactory:
+    '''
+    The class is used for the centralized creation 
+    of the Flask application and its auxiliary extensions.
+    '''
 
     @classmethod
-    def make_celery(cls, app: Flask) -> Celery:
-        celery = Celery(
-            app.import_name,
-            backend=app.config['CELERY_RESULT_BACKEND'],
-            broker=app.config['CELERY_BROKER_URL']
-        )
+    def make_flask_application(cls, name: str, session_dir: Path,
+                               cache_dir: Path) -> Flask:
+        '''
+        Initializes the Flask application.
+        '''
+        application = Flask(name)
+        application.config.update(SECRET_KEY=os.environ['flask_secret_key'],
+                                  SESSION_TYPE='filesystem',
+                                  SESSION_FILE_DIR=session_dir,
+                                  SESSION_PERMANENT=False,
+                                  CACHE_TYPE='filesystem',
+                                  CACHE_DIR=cache_dir)
+        return application
+
+    @classmethod
+    def make_flask_session(cls, application: Flask) -> Session:
+        '''
+        Initializes the Flask session for the Flask application.
+        '''
+        session_ = Session(application)
+        return session_
+
+    @classmethod
+    def make_flask_cache(cls, application: Flask) -> Cache:
+        '''
+        Initializes the Flask cache for the Flask application.
+        '''
+        cache = Cache(application)
+        return cache
+
+
+class CeleryFactory:
+    '''
+    The class is used for the centralized creation 
+    of the Celery application.
+    '''
+
+    @classmethod
+    def make_celery(cls, app: Flask, backend: AnyHttpUrl,
+                    broker: AnyHttpUrl) -> Celery:
+        '''
+        Initializes the Celery application 
+        by the Flask application with using 
+        the Flask application context.
+        '''
+        celery = Celery(app.import_name, backend=backend, broker=broker)
         celery.conf.update(app.config)
-    
+
         class ContextTask(celery.Task):
+
             def __call__(self, *args, **kwargs):
                 with app.app_context():
                     return self.run(*args, **kwargs)
-    
+
         celery.Task = ContextTask
         return celery
