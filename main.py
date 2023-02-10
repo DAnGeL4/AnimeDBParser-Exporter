@@ -20,7 +20,7 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
     
     @functools.wraps(redirected_function)
     def wrapper(*args, **kwargs):
-        redir_out = OutputLogger(duplicate=True, name="main")
+        redir_out = OutputLogger(duplicate=True, name=__name__)
         logger = redir_out.logger
         
         logger.info("STARTED...\n")
@@ -40,11 +40,11 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
 
 import subprocess
 
-def run_setup_script(setup_file) -> typ.NoReturn:
+def run_setup_script(setup_file, args) -> typ.NoReturn:
     '''
     Checking the dependencies and external ip for atlas mongodb.
     '''
-    answer_values = subprocess.check_output([setup_file])
+    answer_values = subprocess.check_output([setup_file, *args])
     answer_values = answer_values.decode('utf-8')
 
     answers = answer_values.split('\n')
@@ -58,10 +58,23 @@ def prepare_redis_server():
     '''
     '''
     redis_setup_sh_file = "./sh_scripts/redis_up.sh"
-    res = run_setup_script(redis_setup_sh_file)
+    redis_log_file = './var/logs/bash.log'
+    res = run_setup_script(redis_setup_sh_file, [redis_log_file])
     
     if res != "DONE": 
         print("ERROR. Failed to start Redis.")
+        return False
+    return True
+
+def prepare_celery_worker():
+    '''
+    '''
+    celery_setup_sh_file = "./sh_scripts/celery_worker_up.sh"
+    celery_log_file = './var/logs/bash.log'
+    res = run_setup_script(celery_setup_sh_file, [celery_log_file])
+    
+    if res != "DONE": 
+        print("ERROR. Failed to start Celery.")
         return False
     return True
     
@@ -72,6 +85,7 @@ def main() -> typ.NoReturn:
 
     res = prepare_redis_server()
     if not res: return
+    res = prepare_celery_worker()
 
     #user select
     #temporary solution
