@@ -52,9 +52,10 @@ ENABLE_EXPORTER_MODULES: bool = bool(
 )
 #---
 
-# Common names
+# Common constants
 #---
 FLASK_APPLICATION_NAME: str = "CIE"
+FLASK_SESSION_FILE_THRESHOLD = 10
 #---
 
 # Web Protocols
@@ -88,9 +89,13 @@ WEB_PAGES_DIR: Path = os.path.join(VARIABLE_DIR, "web_pages/")
 JSON_DUMPS_DIR: Path = os.path.join(VARIABLE_DIR, "json_dumps/")
 FLASK_SESSION_FILE_DIR: Path = os.path.join(VARIABLE_DIR, "flask_session/")
 FLASK_CACHE_DIR: Path = os.path.join(VARIABLE_DIR, "flask_cache/")
+SH_DIR: Path = os.path.join(ROOT_DIRECTORY, "sh_scripts/")
 
+REDIS_SETUP_SH_FILE: Path = os.path.join(SH_DIR, "redis_up.sh")
+CELERY_SETUP_SH_FILE: Path = os.path.join(SH_DIR, "celery_worker_up.sh")
 CORRECT_PROXIES_FILE: Path = os.path.join(PROXY_LISTS_DIR, "correct_proxies")
 GLOBAL_LOG_FILE: Path = os.path.join(GLOBAL_LOG_DIR, 'general_log.log')
+COMMON_BASH_LOG_FILE: Path = os.path.join(GLOBAL_LOG_DIR, "bash.log")
 LOCAL_PROXY_FILES: typ.Dict[Protocol, str] = dict({
     PROXY_PROTOCOLS["socks4"]: "proxy_socks4",
     PROXY_PROTOCOLS["socks5"]: "proxy_socks5",
