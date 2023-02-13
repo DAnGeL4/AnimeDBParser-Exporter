@@ -20,8 +20,8 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
     
     @functools.wraps(redirected_function)
     def wrapper(*args, **kwargs):
-        redir_out = OutputLogger(duplicate=True, name=__name__)
-        logger = redir_out.logger
+        m_serv = MainService()
+        logger = m_serv.logger
         
         logger.info("STARTED...\n")
         logger.info("-----\n")
@@ -36,56 +36,20 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
 #--Finish decorators block
 
 
-#--Start main block
-
-import subprocess
-
-def run_setup_script(setup_file, args) -> typ.NoReturn:
-    '''
-    Checking the dependencies and external ip for atlas mongodb.
-    '''
-    answer_values = subprocess.check_output([setup_file, *args])
-    answer_values = answer_values.decode('utf-8')
-
-    answers = answer_values.split('\n')
-    for answer in answers:
-        print(answer)
-
-    status = answers[-2].split(' ')[-1]
-    return status
-
-def prepare_redis_server():
-    '''
-    '''
-    redis_setup_sh_file = "./sh_scripts/redis_up.sh"
-    redis_log_file = './var/logs/bash.log'
-    res = run_setup_script(redis_setup_sh_file, [redis_log_file])
-    
-    if res != "DONE": 
-        print("ERROR. Failed to start Redis.")
-        return False
-    return True
-
-def prepare_celery_worker():
-    '''
-    '''
-    celery_setup_sh_file = "./sh_scripts/celery_worker_up.sh"
-    celery_log_file = './var/logs/bash.log'
-    res = run_setup_script(celery_setup_sh_file, [celery_log_file])
-    
-    if res != "DONE": 
-        print("ERROR. Failed to start Celery.")
-        return False
-    return True
-    
+#--Start main block    
     
 @basic_output
 def main() -> typ.NoReturn:
     '''Entry point.'''
+    m_serv = MainService()
 
-    res = prepare_redis_server()
-    if not res: return
-    res = prepare_celery_worker()
+    if not m_serv.prepare_redis_server(): 
+        m_serv.logger.error('The Redis server is not running.')
+        return
+        
+    if not m_serv.prepare_celery_worker():
+        m_serv.logger.error('The Celery worker is not running.')
+        return
 
     #user select
     #temporary solution
@@ -99,8 +63,7 @@ def main() -> typ.NoReturn:
     })
     selected_action = ServerAction.EXPORT
     #----
-
-    m_serv = MainService()
+    
     #_ = m_serv.processing_for_selected_module(selected_action, selected_modules)
 
     flask_app.run_app()
@@ -112,5 +75,5 @@ def main() -> typ.NoReturn:
     
 #--Start run block
 OutputLogger.base_configure_logging()
-main()
+_ = main()
 #--Finish run block
