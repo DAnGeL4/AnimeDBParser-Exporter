@@ -52,13 +52,26 @@ class MainService:
             return False
             
         return True
+
+    def prepare_modules_proxies(self):
+        '''
+        '''
+        for modules_by_action in EnabledModules:
+            print(f"Action: {modules_by_action.name}")
+            
+            for module in modules_by_action.value:
+                print(f"Module name: {module.module_name}")
+                prx_chk = ProxyChecker(module.module_name)
+                _ = prx_chk.prepare_proxy_lists(
+                            module.config_module.url_general)
+            
     
     def prepare_module(self, module: ConnectedModuleType) -> bool:
         '''Performs the initial preparing for the module.'''
         prx_chk = ProxyChecker(module.module_name)
         web_serv = WebPageService(module.module_name, module.config_module)
         
-        prx_chk.prepare_proxy_lists(module.config_module.url_general)
+        _ = prx_chk.prepare_proxy_lists(module.config_module.url_general)
         if not web_serv.get_preparing(): return False
         return True
         

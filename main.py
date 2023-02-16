@@ -51,6 +51,8 @@ def main() -> typ.NoReturn:
         m_serv.logger.error('The Celery worker is not running.')
         return
 
+    _ = m_serv.prepare_modules_proxies()
+
     #user select
     #temporary solution
     selected_modules = dict({
