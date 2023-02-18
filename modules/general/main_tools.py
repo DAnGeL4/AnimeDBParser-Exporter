@@ -31,18 +31,24 @@ class MainService:
         self.logger = OutputLogger(duplicate=True, 
                                    name="main_serv").logger
 
+    def is_allowed_action(self, action: ServerAction) -> bool:
+        '''
+        Checks whether the action is enabled.
+        '''
+        allow_values = dict({
+            ServerAction.PARSE: ENABLE_PARSING_MODULES,
+            ServerAction.EXPORT: ENABLE_EXPORTER_MODULES,
+        })
+        return allow_values[action]
+        
+
     def checking_module(self, module: ConnectedModuleType, 
                         action: ServerAction) -> bool:
         '''
         Checks whether the module is allowed 
         and whether the action is enabled.
         '''
-        allow_values = dict({
-            ServerAction.PARSE: ENABLE_PARSING_MODULES,
-            ServerAction.EXPORT: ENABLE_EXPORTER_MODULES,
-        })
-        
-        if not allow_values[action]:
+        if not self.is_allowed_action(action):
             self.logger.error(f"{action.name} action disabled.\n")
             return False
             
@@ -53,26 +59,37 @@ class MainService:
             
         return True
 
-    def prepare_modules_proxies(self):
+    def prepare_modules_proxies(self) -> typ.NoReturn:
         '''
+        Performs an initial proxy check 
+        for enabled modules for allowed actions.
         '''
         for modules_by_action in EnabledModules:
-            print(f"Action: {modules_by_action.name}")
+            action = ServerAction(modules_by_action.name)
+                
+            self.logger.info(f"Started preparing for {action.name} modules.")
+            
+            if not self.is_allowed_action(action):
+                self.logger.warning(f"{action.name} action disabled.\n")
+                continue
             
             for module in modules_by_action.value:
-                print(f"Module name: {module.module_name}")
+                self.logger.info("...preparing for module - " \
+                                 f"{module.module_name}.")
+                
                 prx_chk = ProxyChecker(module.module_name)
                 _ = prx_chk.prepare_proxy_lists(
                             module.config_module.url_general)
-            
+                
+                self.logger.info("Preparing for module - " \
+                                 f"{module.module_name} is done.")
+                
+            self.logger.info(f"Finished preparing for {action.name} modules.\n")
     
-    def prepare_module(self, module: ConnectedModuleType) -> bool:
+    def prepare_module(self, module: ConnectedModuleType, **kwargs) -> bool:
         '''Performs the initial preparing for the module.'''
-        prx_chk = ProxyChecker(module.module_name)
         web_serv = WebPageService(module.module_name, module.config_module)
-        
-        _ = prx_chk.prepare_proxy_lists(module.config_module.url_general)
-        if not web_serv.get_preparing(): return False
+        if not web_serv.get_preparing(**kwargs): return False
         return True
         
     def parse_for_selected_module(self, selected_modules: 
