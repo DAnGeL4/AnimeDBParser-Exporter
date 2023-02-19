@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 
 #Custom imports
-from configs.settings import AnimeInfoType, WebPage, AnimeTypes, AnimeStatuses
+from configs.settings import AnimeInfoType, WebPage, AnimeType, AnimeStatuse
 from configs.abstract_classes import WebPageParserAbstract
 from modules.general.tools import OutputLogger
 #--Finish imports block
@@ -30,6 +30,7 @@ class WebPageParser(WebPageParserAbstract):
         self._url_general = module_url_general
         
         self._type_tag = "Тип"
+        self._genres_tag = "Жанры"
         self._episodes_tag = "Эпизоды"
         self._status_year_tag = "Статус"
         self._other_names_tag = "Другие названия"
@@ -64,6 +65,7 @@ class WebPageParser(WebPageParserAbstract):
         item_list_info = soup.find(class_="anime__info-list")
 
         item_type = self._get_item_by_tag(self._type_tag, item_list_info)
+        item_genres = self._get_item_by_tag(self._genres_tag, item_list_info)
         item_episodes = self._get_item_by_tag(self._episodes_tag, item_list_info)
         item_status_year = self._get_item_by_tag(self._status_year_tag, item_list_info)
         a_items_status_year = item_status_year.find_all('a')
@@ -75,6 +77,7 @@ class WebPageParser(WebPageParserAbstract):
             original_name=self._get_anime_original_name(soup),
             other_names=self._get_other_names(item_other_names),
             type=self._get_anime_type(item_type),
+            genres=self._get_anime_genres(item_genres),
             ep_count=self._get_anime_ep_count(item_episodes),
             year=self._get_anime_year(a_items_status_year),
             status=self._get_anime_status(a_items_status_year)
@@ -123,7 +126,7 @@ class WebPageParser(WebPageParserAbstract):
 
         return anime_original_name
 
-    def _get_anime_type(self, item: BeautifulSoup) -> AnimeTypes:
+    def _get_anime_type(self, item: BeautifulSoup) -> AnimeType:
         '''
         Parses anime type from the item.
         '''
@@ -132,6 +135,17 @@ class WebPageParser(WebPageParserAbstract):
         anime_type = 'film' if anime_type == 'polnometrazhnyi-film' else anime_type
 
         return anime_type
+
+    def _get_anime_genres(self, item: BeautifulSoup) -> typ.List[str]:
+        '''
+        Parses anime genres from the item.
+        '''
+        anime_genres = list()
+        gender_href_list = item.find_all("a")
+        for item_genre in gender_href_list:
+            anime_genres.append(item_genre.text.strip())
+        
+        return anime_genres
 
     def _get_anime_ep_count(self, item: BeautifulSoup) -> typ.Union[int, None]:
         '''
@@ -153,7 +167,7 @@ class WebPageParser(WebPageParserAbstract):
 
         return anime_ep_count
 
-    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatuses:
+    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatuse:
         '''
         Parses anime status from the item.
         '''

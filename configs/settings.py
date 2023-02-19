@@ -35,8 +35,8 @@ RELOAD_WEB_PAGES: bool = bool(
     #True
 )
 UPDATE_JSON_DUMPS: bool = bool(
-    False
-    #True
+    #False
+    True
 )
 USE_MULTITHREADS: bool = bool(  
     #False
@@ -223,6 +223,7 @@ class AnimeInfoType:
     original_name: str
     other_names: typ.List[str]
     type: AnimeType
+    genres: typ.List[str]
     ep_count: typ.Union[int, None]
     year: int
     status: AnimeStatuse
@@ -253,7 +254,7 @@ ProcessedTitlesDump: typ.Union[str,
 
 # Compatibility tables
 #---
-ActionModuleCompatibility: typ.Dict[ServerAction, ActionModule] = {
+ActionToModuleCompatibility: typ.Dict[ServerAction, ActionModule] = {
     ServerAction.PARSE: ActionModule.PARSER,
     ServerAction.EXPORT: ActionModule.EXPORTER
 }
