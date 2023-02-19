@@ -1,24 +1,20 @@
 #--Start imports block
 #System imports
-import os
 import json
+import typing as typ
+from string import Template
 from bs4 import BeautifulSoup
 from requests.structures import CaseInsensitiveDict
 #Custom imports
 from configs import settings as cfg
 from configs import abstract_classes as ac
+from modules.general.requests_connections import RequestsConnections
 #--Finish imports block
 
 
 #--Start global constants block
 class AnimeBuffRuConfig(ac.SiteSettings):
     '''Configuration for site animebuff.ru.'''
-
-    user_num = None
-    _login = os.environ['animebuff_login']
-    _password = os.environ['animebuff_pwd']
-    payload = {'username': _login, 'password': _password}
-
     use_proxy = True
     proxies = cfg.REQUEST_PROXIES_FORMAT
     
@@ -26,7 +22,8 @@ class AnimeBuffRuConfig(ac.SiteSettings):
     url_general = f"https://{url_domain}"
     url_login = f"{url_general}/login"
     url_search = f"{url_general}/search?q="
-    url_wath_lists = f"{url_general}/users/{user_num}/watchlist"
+    url_profile = Template(f"{url_general}/users/$user_num")
+    url_wath_lists = Template(f"{url_general}/users/$user_num/watchlist")
     url_type_option = "?type="
 
     url_types = {
@@ -42,10 +39,11 @@ class AnimeBuffRuConfig(ac.SiteSettings):
             "%D0%98%D0%B7%D0%B1%D1%80%D0%B0%D0%BD%D0%BD%D0%BE%D0%B5"
     }
 
-    cookies = {
-        "animebuff_session": "null"
-    }
+    _cookies_key = "animebuff_session"
 
+    cookies = {
+        _cookies_key: "null"
+    }
     headers = CaseInsensitiveDict([
         ("Accept", 
          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"),
@@ -53,14 +51,29 @@ class AnimeBuffRuConfig(ac.SiteSettings):
          "Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0")
     ])
 
-    def __init__(self, unproc_cookies):
-        cookie = self._get_coockie_by_key("animebuff_session", unproc_cookies)
+    def __init__(self, unproc_cookies: typ.Union[str, cfg.Cookies, cfg.JSON]):
+        cookie = self._get_coockie_by_key(self._cookies_key, unproc_cookies)
         cookies = {
-            "animebuff_session": json.dumps(cookie)
+            self._cookies_key: json.dumps(cookie)
         } 
         self.cookies = cookies
 
-    def make_preparing(self, web_page: cfg.WebPage) -> bool:
+    def _get_username(self, **kwargs) -> typ.Union[str, None]:
+        '''
+        Gets username from the profile page.
+        '''
+        assert 'module_name' in kwargs
+        req_conn = RequestsConnections(kwargs['module_name'], self)
+        web_page = req_conn.get_web_page(None, self.url_profile, 
+                                         cfg.RequestMethod.GET)
+        
+        soup = BeautifulSoup(web_page, 'lxml')
+        item_username = soup.find(class_="new-profile__name")
+        username = item_username.text.strip()
+        
+        return username
+
+    def make_preparing(self, web_page: cfg.WebPage, **kwargs) -> bool:
         '''
         Performs the initial preparation of the configuration module.
         Gets a profile identifier and corrects watchlists url.
@@ -75,7 +88,9 @@ class AnimeBuffRuConfig(ac.SiteSettings):
             user_num = profile_url.split('/')[-1]
     
             self.user_num = user_num
-            self.url_wath_lists = f"{self.url_general}/users/{user_num}/watchlist"
+            self.url_profile = self.url_profile.substitute(user_num=user_num)
+            self.url_wath_lists = self.url_wath_lists.substitute(user_num=user_num)
+            self.username = self._get_username(**kwargs)
             
         except:
             return False
