@@ -8,7 +8,7 @@ from pydantic import AnyHttpUrl
 #Custom imports
 from configs.settings import AnimeInfoType, WebPage, AnimeType, AnimeStatuse
 from configs.abstract_classes import WebPageParserAbstract
-from modules.general.tools import OutputLogger
+from lib.tools import OutputLogger
 #--Finish imports block
 
 

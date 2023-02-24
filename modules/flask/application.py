@@ -8,7 +8,7 @@ from configs import settings as cfg
 from configs.application_objects import flask_app, flask_cache
 from modules.flask.routes import routes
 from modules.flask import service as app_service
-from modules.general.main_tools import MainService
+from modules.common.main_service import MainService
 #--Finish imports block
 
 
