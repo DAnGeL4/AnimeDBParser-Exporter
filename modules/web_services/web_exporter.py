@@ -11,8 +11,8 @@ from concurrent import futures as fts
 #Custom imports
 from configs import settings as cfg
 from configs import abstract_classes as ac
-from modules.general.tools import OutputLogger, ListenerLogger
-from modules.general.web_page_tools import WebPageService, WebPageParser
+from lib.tools import OutputLogger, ListenerLogger
+from modules.web_services.web_page_tools import WebPageService, WebPageParser
 #--Finish imports block
 
 
@@ -47,7 +47,7 @@ class TitleExporter:
         return file_name
     
     def send_request(self, url: AnyHttpUrl, 
-                     method: cfg.RequestMethods=cfg.RequestMethods.GET,
+                     method: cfg.RequestMethod=cfg.RequestMethod.GET,
                      save_page: bool=False) -> cfg.WebPage:
         '''
         Sends the selected request. 
@@ -131,7 +131,7 @@ class TitleExporter:
             return False
             
         url = self._config_mod.url_general + action_link
-        _ = self.send_request(url, cfg.RequestMethods.POST)
+        _ = self.send_request(url, cfg.RequestMethod.POST)
         
         self._logger.success("...submitting completed.\n")
         return True
@@ -268,7 +268,7 @@ class TitleExporter:
         error_titles = dict()
 
         for watchlist_name, watchlist_dump in titles_dump.items():
-            watchlist_type = cfg.WatchListCompatibility[watchlist_name]
+            watchlist_type = cfg.WatchListType(watchlist_name)
             self._type = watchlist_type
             error_titles[self._type.value] = list()
             

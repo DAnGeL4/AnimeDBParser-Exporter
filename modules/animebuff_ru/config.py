@@ -1,4 +1,4 @@
-#--Start imports block
+--Start imports block
 #System imports
 import json
 import typing as typ
@@ -8,7 +8,7 @@ from requests.structures import CaseInsensitiveDict
 #Custom imports
 from configs import settings as cfg
 from configs import abstract_classes as ac
-from modules.general.requests_connections import RequestsConnections
+from lib.requests_connections import RequestsConnections
 #--Finish imports block
 
 
