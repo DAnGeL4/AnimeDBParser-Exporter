@@ -1,16 +1,12 @@
 #--Start imports block
 #System imports
-import os
 import functools
 import typing as typ
 
 #Custom imports
-from configs.settings import ServerAction
-from configs.connected_modules import ModuleAnimeBuffRu, ModuleAnimeGoOrg
-from modules.general.tools import OutputLogger
-from modules.general.main_tools import MainService
-
-import modules.flask.application as flask_app
+from lib.tools import OutputLogger
+from modules.common.main_service import MainService
+import modules.flask.application as _flask
 #--Finish imports block
 
 
@@ -42,7 +38,7 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
 def main() -> typ.NoReturn:
     '''Entry point.'''
     m_serv = MainService()
-
+    
     if not m_serv.prepare_redis_server(): 
         m_serv.logger.error('The Redis server is not running.')
         return
@@ -50,25 +46,10 @@ def main() -> typ.NoReturn:
     if not m_serv.prepare_celery_worker():
         m_serv.logger.error('The Celery worker is not running.')
         return
-
+    
     _ = m_serv.prepare_modules_proxies()
 
-    #user select
-    #temporary solution
-    selected_modules = dict({
-        ServerAction.PARSE: ModuleAnimeBuffRu(
-            cookies=os.environ['animebuff_session_value']
-        ),
-        ServerAction.EXPORT: ModuleAnimeGoOrg(
-            cookies=os.environ['animego_REMEMBERME']
-        )
-    })
-    selected_action = ServerAction.EXPORT
-    #----
-    
-    #_ = m_serv.processing_for_selected_module(selected_action, selected_modules)
-
-    flask_app.run_app()
+    _ = _flask.run_app()
     
     return
         
