@@ -132,6 +132,7 @@ class WebPageService:
         '''
         Performs the starting preparation of the configuration module.
         '''
+        res = False
         web_page = None
         req_conn = RequestsConnections(self._module_name, self.config_module,
                                        self._queue)
@@ -139,9 +140,14 @@ class WebPageService:
         self._logger.info(
             f"Preparing the configuration module ({self._module_name})...")
 
-        web_page = req_conn.get_web_page(type, self.config_module.url_general,
-                                         cfg.RequestMethod.GET)
-        res = self.config_module.make_preparing(web_page, **kwargs)
+        if self.config_module._is_authorized_user(): 
+            self._logger.info("...user alredy authorized...")
+            res = True
+
+        if not res:
+            web_page = req_conn.get_web_page(type, self.config_module.url_general,
+                                             cfg.RequestMethod.GET)
+            res = self.config_module.make_preparing(web_page, **kwargs)
 
         if not res:
             self._logger.critical("...preparing failed.\n")
