@@ -104,18 +104,28 @@ class FlaskFactory:
     '''
 
     @classmethod
-    def make_flask_application(cls, name: str, session_dir: Path,
-                               cache_dir: Path) -> Flask:
+    def make_flask_application(cls, 
+                                name: str, 
+                                session_type: str, 
+                                session_dir: Path, 
+                                session_ttl: int,
+                                session_thresh: int, 
+                                cache_type: str, 
+                                cache_dir: Path, 
+                                cache_ttl: int) -> Flask:
         '''
         Initializes the Flask application.
         '''
         application = Flask(name)
         application.config.update(SECRET_KEY=os.environ['flask_secret_key'],
-                                  SESSION_TYPE='filesystem',
+                                  SESSION_TYPE=session_type,
                                   SESSION_FILE_DIR=session_dir,
-                                  SESSION_PERMANENT=False,
-                                  CACHE_TYPE='filesystem',
-                                  CACHE_DIR=cache_dir)
+                                  SESSION_PERMANENT=True,
+                                  PERMANENT_SESSION_LIFETIME=session_ttl,
+                                  SESSION_FILE_THRESHOLD=session_thresh,
+                                  CACHE_TYPE=cache_type,
+                                  CACHE_DIR=cache_dir,
+                                  CACHE_DEFAULT_TIMEOUT=cache_ttl)
         return application
 
     @classmethod
