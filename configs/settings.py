@@ -8,6 +8,7 @@ from enum import Enum
 import dataclasses as dcls
 from pydantic import AnyHttpUrl, Protocol, HttpUrl
 from flask_session import Session
+from datetime import timedelta
 from pathlib import Path
 
 #Custom imports
@@ -50,12 +51,26 @@ ENABLE_EXPORTER_MODULES: bool = bool(
     #False
     True
 )
+RESTART_CELERY_WORKERS: bool = bool(
+    True
+    #Flase
+)
+CELERY_USE_PICKLE_SERIALIZER = bool(
+    True
+    #False
+)
 #---
 
 # Common constants
 #---
+CELERY_TASKS_MODULE = 'modules.common.celery_tasks'
 FLASK_APPLICATION_NAME: str = "CIE"
 FLASK_SESSION_FILE_THRESHOLD = 10
+FLASK_TIME_TO_LIVE = int(timedelta(minutes=30).total_seconds())
+FLASK_SESSION_TIME_TO_LIVE = FLASK_TIME_TO_LIVE
+FLASK_CACHE_TIME_TO_LIVE = FLASK_TIME_TO_LIVE
+FLASK_SESSION_TYPE = 'filesystem'
+FLASK_CACHE_TYPE = 'filesystem'
 #---
 
 # Web Protocols
