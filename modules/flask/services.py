@@ -5,6 +5,7 @@ import typing as typ
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path as PathType
 from flask import request, render_template, session
+from celery import Task as CeleryTask
 
 #Custom imports
 from configs.settings import (
@@ -15,15 +16,19 @@ from configs.settings import (
     Session, Cookies, JSON, WebPagePart, WebPage
 )
 from configs.abstract_classes import ConnectedModuleType
-from configs.application_objects import flask_cache
 from configs.connected_modules import (
     EnabledParserModules, EnabledExporterModules,
     NameToModuleCompatibility, EnabledModules
 )
 from lib.tools import OutputLogger, is_allowed_action
+from modules.common.application_objects import flask_cache
 from modules.web_services.web_page_tools import WebPageService, WebPageParser
 from modules.web_services.web_exporter import TitleExporter
 #--Finish imports block
+
+
+#--Start global constants block
+#--Finish global constants block
 
 
 #--Start functional block
@@ -53,12 +58,13 @@ class DataService:
             
         return True
     
-    def prepare_module(self, module: ConnectedModuleType, **kwargs) -> bool:
+    def prepare_module(self, module: ConnectedModuleType) -> bool:
         '''Performs the initial preparing for the module.'''
         web_serv = WebPageService(module.module_name, module.config_module)
-        if not web_serv.get_preparing(**kwargs): return False
+        if not web_serv.get_preparing(module_name=module.module_name): 
+            return False
         return True
-        
+
     def parse_for_selected_module(self, selected_modules: 
                                   typ.Dict[ServerAction, ConnectedModuleType]
                                  ) -> typ.NoReturn:
@@ -71,10 +77,6 @@ class DataService:
 
         if not self.checking_module(module, action): return
         if not self.prepare_module(module): return
-            
-        for type in WatchListType:
-            page_parser = WebPageParser(module, type)
-            page_parser.parse_typed_watchlist()
             
         self.logger.info("* ...parsing action " + 
                           f"for module {module.module_name} finish.\n")
@@ -387,7 +389,17 @@ class CacheService:
     _key_proc_status = 'proc_status'
     _key_selected_parser = ActionModule.PARSER.value
     _key_selected_exporter = ActionModule.EXPORTER.value
+    _key_running_task = 'running_tasks'
 
+    __cache_structure: Session = dict({
+        _key_parsed_titles: AnimeByWatchList,
+        _key_exported_titles: AnimeByWatchList,
+        _key_proc_status: typ.Dict,
+        _key_selected_parser: ConnectedModuleType,
+        _key_selected_exporter: ConnectedModuleType,
+        _key_running_task: typ.Union[None, CeleryTask]
+    })
+    
     @property
     def cached_parsed_titles(self):
         '''
@@ -423,6 +435,24 @@ class CacheService:
         '''
         '''
         _ = flask_cache.set(self._key_proc_status, value)
+
+    @property
+    def cached_running_task(self) -> CeleryTask:
+        '''
+        '''
+        return flask_cache.get(self._key_running_task)
+
+    @cached_running_task.setter
+    def cached_running_task(self, value: CeleryTask) -> typ.NoReturn:
+        '''
+        '''
+        _ = flask_cache.set(self._key_running_task, value)
+
+    @cached_running_task.deleter
+    def cached_running_task(self) -> typ.NoReturn:
+        '''
+        '''
+        _ = flask_cache.set(self._key_running_task, None)
 
     @property
     def cached_parser_module(self) -> ConnectedModuleType:
@@ -690,11 +720,11 @@ class HTMLRenderingService:
 
     def get_rendered_status_bar(self,
                                 action: ServerAction,
-                                progress_xpnd: bool,
-                                counter: int = None) -> WebPagePart:
+                                progress_xpnd: bool) -> WebPagePart:
         '''
         Returns the html template of status bar with filled data.
         '''
+
         kwargs = {
             'selected_tab': action.value,
             'tab_key': action.value,
