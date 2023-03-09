@@ -11,11 +11,17 @@ from pathlib import Path
 from pydantic import AnyHttpUrl
 
 #Custom imports
-from configs import settings as cfg
-from configs import abstract_classes as ac
+from configs.settings import (
+    WEB_PAGES_DIR, RELOAD_WEB_PAGES, USE_MULTITHREADS,
+    JSON_DUMPS_DIR, UPDATE_JSON_DUMPS,
+    WatchListType, AnimeByWatchList,
+    WebPage, RequestMethod,
+)
+from configs.abstract_classes import (
+    SiteSettings, WebPageParserAbstract, ConnectedModuleType
+)
 from lib.tools import OutputLogger, ListenerLogger
 from lib.requests_connections import RequestsConnections
-
 #--Finish imports block
 
 
@@ -27,7 +33,7 @@ class WebPageService:
 
     def __init__(self,
                  module_name: str,
-                 config_module: ac.SiteSettings,
+                 config_module: SiteSettings,
                  queue: mp.Queue = None):
         self._module_name = module_name
         self._queue = queue
@@ -41,9 +47,9 @@ class WebPageService:
         self.url_wath_lists = self.config_module.url_wath_lists
 
         self.dir_name = self.url_domain.replace('.', '_')
-        self.dir_path = os.path.join(cfg.WEB_PAGES_DIR, self.dir_name)
+        self.dir_path = os.path.join(WEB_PAGES_DIR, self.dir_name)
 
-    def _get_page_filename(self, type: cfg.WatchListType,
+    def _get_page_filename(self, type: WatchListType,
                            page_filename: str) -> str:
         '''
         Gets the file name by the type of user watchlist.
@@ -63,7 +69,7 @@ class WebPageService:
         file_path = os.path.join(self.dir_path, file_name)
         return file_path
 
-    def is_exist_web_page_file(self, type: cfg.WatchListType,
+    def is_exist_web_page_file(self, type: WatchListType,
                                page_filename: str) -> bool:
         '''Checks if the web-page file is exist.'''
         file_name = self._get_page_filename(type, page_filename)
@@ -77,9 +83,10 @@ class WebPageService:
 
         return is_exist
 
-    def load_web_page_file(self, type: cfg.WatchListType,
-                           page_filename: str) -> cfg.WebPage:
+    def load_web_page_file(self, type: WatchListType,
+                           page_filename: str) -> WebPage:
         '''
+        Loads a web page from a file if it exists.
         '''
         web_page = None
         file_name = self._get_page_filename(type, page_filename)
@@ -99,8 +106,8 @@ class WebPageService:
 
         return web_page
 
-    def save_web_page(self, type: cfg.WatchListType, page_filename: str,
-                      web_page: cfg.WebPage) -> bool:
+    def save_web_page(self, type: WatchListType, page_filename: str,
+                      web_page: WebPage) -> bool:
         '''
         Saves the html-response of web-page to the file.
         '''
@@ -146,7 +153,7 @@ class WebPageService:
 
         if not res:
             web_page = req_conn.get_web_page(type, self.config_module.url_general,
-                                             cfg.RequestMethod.GET)
+                                             RequestMethod.GET)
             res = self.config_module.make_preparing(web_page, **kwargs)
 
         if not res:
@@ -156,11 +163,11 @@ class WebPageService:
         return res
 
     def get_web_page_file(self,
-                          type: cfg.WatchListType,
+                          type: WatchListType,
                           page_filename: str = None,
                           url: AnyHttpUrl = None,
-                          method: cfg.RequestMethod = cfg.RequestMethod.GET,
-                          save_page: bool = True) -> cfg.WebPage:
+                          method: RequestMethod = RequestMethod.GET,
+                          save_page: bool = True) -> WebPage:
         '''
         Returns the web-page by passing all the checks.
         '''
@@ -169,7 +176,7 @@ class WebPageService:
                                        self._queue)
 
         if self.is_exist_web_page_file(
-                type, page_filename) and not cfg.RELOAD_WEB_PAGES:
+                type, page_filename) and not RELOAD_WEB_PAGES:
             web_page = self.load_web_page_file(type, page_filename)
 
         else:
@@ -186,7 +193,7 @@ class WebPageService:
         Loads JSON data from a file for a specific module.
         '''
         json_data = None
-        file_path = os.path.join(cfg.JSON_DUMPS_DIR, json_dump_name)
+        file_path = os.path.join(JSON_DUMPS_DIR, json_dump_name)
 
         self._logger.info(f"Loading json dump for {module_name} module...")
         try:
@@ -204,7 +211,7 @@ class WebPageService:
         return json_data
 
     def prepare_json_data(self, json_data: typ.Dict[str, typ.Any],
-                          type: cfg.WatchListType) -> typ.Dict[str, typ.Any]:
+                          type: WatchListType) -> typ.Dict[str, typ.Any]:
         '''
         Prepares data into a valid format for JSON.
         '''
@@ -220,7 +227,7 @@ class WebPageService:
         Saves anime data in JSON format to a file 
         for a specific module.
         '''
-        file_path = os.path.join(cfg.JSON_DUMPS_DIR, json_dump_name)
+        file_path = os.path.join(JSON_DUMPS_DIR, json_dump_name)
         json_object = json.dumps(json_data, indent=4, ensure_ascii=False)
 
         self._logger.info(f"Saving json dump for {module_name} module...")
@@ -236,15 +243,15 @@ class WebPageService:
         return True
 
 
-class WebPageParser(ac.WebPageParserAbstract):
+class WebPageParser(WebPageParserAbstract):
     '''
     Class wrapper for a parser class 
     for a module of a certain site.
     '''
 
     def __init__(self,
-                 module: ac.ConnectedModuleType,
-                 type: cfg.WatchListType,
+                 module: ConnectedModuleType,
+                 type: WatchListType,
                  queue: mp.Queue = None):
         self._module = module
         self._config_mod = module.config_module
@@ -291,18 +298,18 @@ class WebPageParser(ac.WebPageParserAbstract):
                 f"Aborted:\n* Page key: {key};\n* Page URL: {url}\n")
 
     def _is_update_needed(
-            self, anime_key: str, json_data: cfg.AnimeByWatchList
+            self, anime_key: str, json_data: AnimeByWatchList
     ) -> typ.Union[None, WebPageService]:
         '''Check the need to update the json dump.'''
         if anime_key in json_data[self._type.value]:
             self._logger.info("...record already exists...")
-            if not cfg.UPDATE_JSON_DUMPS:
+            if not UPDATE_JSON_DUMPS:
                 self._logger.info("...canceled. Updates are not needed.\n")
                 return False
         return True
 
     def _get_web_page(self, anime_key: str,
-                      anime_url: AnyHttpUrl) -> cfg.WebPage:
+                      anime_url: AnyHttpUrl) -> WebPage:
         '''Uses the queue for logging, if necessary, and returns web_page.'''
         web_serv = self._web_serv
         if self._queue:
@@ -317,7 +324,7 @@ class WebPageParser(ac.WebPageParserAbstract):
     @ListenerLogger.send_stop_msg
     def get_anime_info_json(
         self, anime_item: typ.Tuple[str, AnyHttpUrl],
-        json_data: cfg.AnimeByWatchList
+        json_data: AnimeByWatchList
     ) -> typ.Union[typ.Dict[str, AnyHttpUrl], None]:
         '''Updates JSON DUMP if there is no anime info.'''
         anime_key, anime_url = anime_item
@@ -332,6 +339,7 @@ class WebPageParser(ac.WebPageParserAbstract):
 
         anime_info = self.get_anime_info(web_page)
         json_data[self._type.value].update({anime_key: anime_info.asdict()})
+        #Insert a save to db
 
         self._logger.info("...JSON dump updated.\n")
         return None
@@ -339,7 +347,7 @@ class WebPageParser(ac.WebPageParserAbstract):
     @ListenerLogger.listener_preparing
     def get_anime_data_in_multithreads(
         self, all_anime_urls: typ.Dict[str, AnyHttpUrl],
-        json_data: cfg.AnimeByWatchList
+        json_data: AnimeByWatchList
     ) -> typ.List[typ.Dict[str, AnyHttpUrl]]:
         '''Gets anime data in multi-threads.'''
         error_web_pages = list()
@@ -360,7 +368,7 @@ class WebPageParser(ac.WebPageParserAbstract):
 
     def get_anime_data_in_order(
         self, all_anime_urls: typ.Dict[str, AnyHttpUrl],
-        json_data: cfg.AnimeByWatchList
+        json_data: AnimeByWatchList
     ) -> typ.List[typ.Dict[str, AnyHttpUrl]]:
         '''Gets anime data in one stream.'''
         error_web_pages = list()
@@ -371,13 +379,13 @@ class WebPageParser(ac.WebPageParserAbstract):
         return error_web_pages
 
     def get_anime_data(
-            self, web_page: cfg.WebPage,
-            json_data: cfg.AnimeByWatchList) -> cfg.AnimeByWatchList:
+            self, web_page: WebPage,
+            json_data: AnimeByWatchList) -> AnimeByWatchList:
         '''Gets anime data for all links.'''
         error_web_pages = list()
         all_anime_urls = self.get_typed_anime_list(web_page)
 
-        if cfg.USE_MULTITHREADS:
+        if USE_MULTITHREADS:
             error_web_pages = self.get_anime_data_in_multithreads(
                 all_anime_urls, json_data)
         else:

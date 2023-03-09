@@ -9,10 +9,15 @@ from pydantic import AnyHttpUrl
 from concurrent import futures as fts
 
 #Custom imports
-from configs import settings as cfg
-from configs import abstract_classes as ac
+from configs.settings import (
+    RequestMethod, WebPage,
+    AnimeInfoType, LinkedAnimeInfoType, AnimeByWatchList,
+    TitleDump, WatchListType, TitleDumpByKey,
+    USE_MULTITHREADS
+)
+from configs.abstract_classes import ConnectedModuleType
 from lib.tools import OutputLogger, ListenerLogger
-from modules.web_services.web_page_tools import WebPageService, WebPageParser
+from .web_page_tools import WebPageService, WebPageParser
 #--Finish imports block
 
 
@@ -22,7 +27,7 @@ class TitleExporter:
     Contains tools for the export of titles from the dump.
     '''
 
-    def __init__(self, module: ac.ConnectedModuleType):
+    def __init__(self, module: ConnectedModuleType):
         self._module = module
         self._module_name = self._module.module_name
         self._config_mod = self._module.config_module
@@ -47,8 +52,8 @@ class TitleExporter:
         return file_name
     
     def send_request(self, url: AnyHttpUrl, 
-                     method: cfg.RequestMethod=cfg.RequestMethod.GET,
-                     save_page: bool=False) -> cfg.WebPage:
+                     method: RequestMethod=RequestMethod.GET,
+                     save_page: bool=False) -> WebPage:
         '''
         Sends the selected request. 
         Returns the web page of the answer.
@@ -60,8 +65,8 @@ class TitleExporter:
                                         method, save_page)
         return web_page
     
-    def compare_titles(self, query_title: cfg.AnimeInfoType, 
-                       finded_title: cfg.LinkedAnimeInfoType) -> bool:
+    def compare_titles(self, query_title: AnimeInfoType, 
+                       finded_title: LinkedAnimeInfoType) -> bool:
         '''
         Compares two titles of similar types.
         '''
@@ -74,8 +79,8 @@ class TitleExporter:
             return False
         return True
     
-    def find_title_link(self, web_page: cfg.WebPage, 
-                        query_title: cfg.AnimeInfoType) -> typ.Union[AnyHttpUrl, None]:
+    def find_title_link(self, web_page: WebPage, 
+                        query_title: AnimeInfoType) -> typ.Union[AnyHttpUrl, None]:
         '''
         Searches for a link to a suitable title.
         '''
@@ -92,7 +97,7 @@ class TitleExporter:
         self._logger.error("...not finded.\n")
         return None
     
-    def search_title(self, title_data: cfg.AnimeInfoType) -> cfg.WebPage:
+    def search_title(self, title_data: AnimeInfoType) -> WebPage:
         '''
         Searches for a suitable title and gets his web page.
         '''
@@ -117,7 +122,7 @@ class TitleExporter:
         self._logger.success("...searching done.\n")
         return web_page
 
-    def submit_action(self, web_page: cfg.WebPage) -> bool:
+    def submit_action(self, web_page: WebPage) -> bool:
         '''
         Receives a link to the desired action 
         from the web page and sends a request to it.
@@ -131,7 +136,7 @@ class TitleExporter:
             return False
             
         url = self._config_mod.url_general + action_link
-        _ = self.send_request(url, cfg.RequestMethod.POST)
+        _ = self.send_request(url, RequestMethod.POST)
         
         self._logger.success("...submitting completed.\n")
         return True
@@ -145,7 +150,7 @@ class TitleExporter:
         dump_name = mod_name + "/" + json_file_name
         return dump_name
     
-    def get_titles_dump(self, query_module: ac.ConnectedModuleType) -> cfg.AnimeByWatchList:
+    def get_titles_dump(self, query_module: ConnectedModuleType) -> AnimeByWatchList:
         '''
         Receives a dump base for an anime for a user.
         '''
@@ -197,7 +202,7 @@ class TitleExporter:
             _ = self.save_error_titles(error_titles)
 
     @ListenerLogger.send_stop_msg
-    def export_selected_title(self, title_item: typ.Tuple[str, cfg.TitleDump]
+    def export_selected_title(self, title_item: typ.Tuple[str, TitleDump]
                              ) -> typ.Union[str, None]:
         '''
         Exports for the selected dump of title.
@@ -207,7 +212,7 @@ class TitleExporter:
         self._logger.info(f"Starting the export of title ({title_key})...")
         
         try:
-            title_data = cfg.AnimeInfoType(**title_dump)
+            title_data = AnimeInfoType(**title_dump)
         except:
             self._logger.error(f"Bad title data. (Key: {title_key})")
             return title_key
@@ -223,7 +228,7 @@ class TitleExporter:
 
     @ListenerLogger.listener_preparing
     def export_watchlist_in_multithreads(self, watchlist_dump: 
-                                            cfg.TitleDumpByKey) -> typ.List[str]:
+                                         TitleDumpByKey) -> typ.List[str]:
         '''
         Exports for a watchlist dump in multi-threads.
         '''
@@ -247,7 +252,7 @@ class TitleExporter:
         return error_titles
 
     def export_watchlist_in_order(self, watchlist_dump: 
-                                     cfg.TitleDumpByKey) -> typ.List[str]:
+                                  TitleDumpByKey) -> typ.List[str]:
         '''
         Exports for a watchlist dump in one stream.
         '''
@@ -261,18 +266,18 @@ class TitleExporter:
                 
         return error_titles
     
-    def export_titles_dump(self, titles_dump: cfg.AnimeByWatchList) -> typ.NoReturn:
+    def export_titles_dump(self, titles_dump: AnimeByWatchList) -> typ.NoReturn:
         '''
         Exports for the dump anime-base for a user.
         '''
         error_titles = dict()
 
         for watchlist_name, watchlist_dump in titles_dump.items():
-            watchlist_type = cfg.WatchListType(watchlist_name)
+            watchlist_type = WatchListType(watchlist_name)
             self._type = watchlist_type
             error_titles[self._type.value] = list()
             
-            if cfg.USE_MULTITHREADS:
+            if USE_MULTITHREADS:
                 error_titles[self._type.value].extend(
                     self.export_watchlist_in_multithreads(watchlist_dump)
                 )
