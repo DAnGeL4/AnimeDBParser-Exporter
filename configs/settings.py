@@ -10,6 +10,7 @@ from pydantic import AnyHttpUrl, Protocol, HttpUrl
 from flask_session import Session
 from datetime import timedelta
 from pathlib import Path
+from celery import Task as CeleryTask
 
 #Custom imports
 from lib.factory import DataclassTypeFactory
@@ -52,21 +53,25 @@ ENABLE_EXPORTER_MODULES: bool = bool(
     True
 )
 RESTART_CELERY_WORKERS: bool = bool(
-    True
-    #Flase
+    False
+    #True
 )
 CELERY_USE_PICKLE_SERIALIZER = bool(
     True
     #False
 )
+USE_DATABASE = bool(
+    #True
+    False
+)
 #---
 
 # Common constants
 #---
-CELERY_TASKS_MODULE = 'modules.common.celery_tasks'
+CELERY_TASKS_MODULE = 'modules.flask.celery_tasks'
 FLASK_APPLICATION_NAME: str = "CIE"
 FLASK_SESSION_FILE_THRESHOLD = 10
-FLASK_TIME_TO_LIVE = int(timedelta(minutes=30).total_seconds())
+FLASK_TIME_TO_LIVE = int(timedelta(hours=2).total_seconds())
 FLASK_SESSION_TIME_TO_LIVE = FLASK_TIME_TO_LIVE
 FLASK_CACHE_TIME_TO_LIVE = FLASK_TIME_TO_LIVE
 FLASK_SESSION_TYPE = 'filesystem'
@@ -138,6 +143,7 @@ WebPagePart = Response
 HTMLTemplate = typ.Union[WebPage, WebPagePart]
 JSON = typ.Union[typ.Dict[str, typ.Any], typ.List[typ.Dict[str, typ.Any]]]
 Cookies = typ.AnyStr
+CeleryTaskID: CeleryTask = str
 
 
 class RequestMethod(Enum):
