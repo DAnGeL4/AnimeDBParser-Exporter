@@ -15,7 +15,7 @@ from configs.settings import (
     TitleDump, WatchListType, TitleDumpByKey,
     USE_MULTITHREADS
 )
-from configs.abstract_classes import ConnectedModuleType
+from lib.interfaces import IConnectedModule
 from lib.tools import OutputLogger, ListenerLogger
 from .web_page_tools import WebPageService, WebPageParser
 #--Finish imports block
@@ -27,7 +27,7 @@ class TitleExporter:
     Contains tools for the export of titles from the dump.
     '''
 
-    def __init__(self, module: ConnectedModuleType):
+    def __init__(self, module: IConnectedModule):
         self._module = module
         self._module_name = self._module.module_name
         self._config_mod = self._module.config_module
@@ -150,7 +150,7 @@ class TitleExporter:
         dump_name = mod_name + "/" + json_file_name
         return dump_name
     
-    def get_titles_dump(self, query_module: ConnectedModuleType) -> AnimeByWatchList:
+    def get_titles_dump(self, query_module: IConnectedModule) -> AnimeByWatchList:
         '''
         Receives a dump base for an anime for a user.
         '''

@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 #Custom imports
 from configs.settings import AnimeTypes, WatchListTypes, LinkedAnimeInfoType, WebPage
-from configs.abstract_classes import WebPageParserAbstract
+from lib.interfaces import IWebPageParser
 from lib.tools import OutputLogger
 #--Finish imports block
 
@@ -32,7 +32,7 @@ actions_compatibility = {
 
 
 #--Start functional block
-class WebPageParser(WebPageParserAbstract):
+class WebPageParser(IWebPageParser):
     '''
     The class contains methods for parsing 
     the anime information from AnimeGo.org site 

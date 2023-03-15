@@ -10,7 +10,7 @@ from requests.structures import CaseInsensitiveDict
 from logging import Logger
 
 #Custom imports
-from .settings import (
+from configs.settings import (
     WebPage, AnimeInfoType, LinkedAnimeInfoType, 
     WatchListType, AnimeType, AnimeStatuse, 
     JSON, Cookies

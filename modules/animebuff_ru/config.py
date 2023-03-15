@@ -7,13 +7,13 @@ from bs4 import BeautifulSoup
 from requests.structures import CaseInsensitiveDict
 #Custom imports
 from configs import settings as cfg
-from configs import abstract_classes as ac
+from lib import interfaces as ac
 from lib.requests_connections import RequestsConnections
 #--Finish imports block
 
 
 #--Start global constants block
-class AnimeBuffRuConfig(ac.SiteSettings):
+class AnimeBuffRuConfig(ac.ISiteSettings):
     '''Configuration for site animebuff.ru.'''
     use_proxy = True
     proxies = cfg.REQUEST_PROXIES_FORMAT

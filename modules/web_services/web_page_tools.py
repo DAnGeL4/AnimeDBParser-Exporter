@@ -17,8 +17,8 @@ from configs.settings import (
     WatchListType, AnimeByWatchList,
     WebPage, RequestMethod,
 )
-from configs.abstract_classes import (
-    SiteSettings, WebPageParserAbstract, ConnectedModuleType
+from lib.interfaces import (
+    ISiteSettings, IWebPageParser, IConnectedModule
 )
 from lib.tools import OutputLogger, ListenerLogger
 from lib.requests_connections import RequestsConnections
@@ -33,7 +33,7 @@ class WebPageService:
 
     def __init__(self,
                  module_name: str,
-                 config_module: SiteSettings,
+                 config_module: ISiteSettings,
                  queue: mp.Queue = None):
         self._module_name = module_name
         self._queue = queue
@@ -243,14 +243,14 @@ class WebPageService:
         return True
 
 
-class WebPageParser(WebPageParserAbstract):
+class WebPageParser(IWebPageParser):
     '''
     Class wrapper for a parser class 
     for a module of a certain site.
     '''
 
     def __init__(self,
-                 module: ConnectedModuleType,
+                 module: IConnectedModule,
                  type: WatchListType,
                  queue: mp.Queue = None):
         self._module = module
@@ -273,7 +273,7 @@ class WebPageParser(WebPageParserAbstract):
 
     def _init_methods(self) -> typ.NoReturn:
         '''
-        Copies the methods of the implemented WebPageParserAbstract 
+        Copies the methods of the implemented IWebPageParser 
         child class for the common(this) child class.
         
         ! Not worked with multiprocessing tools !

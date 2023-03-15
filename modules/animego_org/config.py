@@ -8,12 +8,12 @@ from requests.structures import CaseInsensitiveDict
 
 #Custom imports
 from configs import settings as cfg
-from configs import abstract_classes as ac
+from lib import interfaces as ac
 #--Finish imports block
 
 
 #--Start global constants block
-class AnimeGoOrgConfig(ac.SiteSettings):
+class AnimeGoOrgConfig(ac.ISiteSettings):
     '''Configuration for site animego.org.'''
     use_proxy = True
     proxies = cfg.REQUEST_PROXIES_FORMAT

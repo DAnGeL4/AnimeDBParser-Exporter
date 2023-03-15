@@ -15,11 +15,11 @@ from configs.settings import (
     WatchListType, AnimeByWatchList, ProcessedTitlesDump, 
     Session, Cookies, JSON, WebPagePart, WebPage
 )
-from configs.abstract_classes import ConnectedModuleType
 from configs.connected_modules import (
     EnabledParserModules, EnabledExporterModules,
     NameToModuleCompatibility, EnabledModules
 )
+from lib.interfaces import IConnectedModule
 from lib.tools import OutputLogger, is_allowed_action
 from modules.common.application_objects import flask_cache
 from modules.web_services.web_page_tools import WebPageService, WebPageParser
@@ -41,7 +41,7 @@ class DataService:
         self.logger = OutputLogger(duplicate=True, 
                                    name="data_serv").logger
 
-    def checking_module(self, module: ConnectedModuleType, 
+    def checking_module(self, module: IConnectedModule, 
                         action: ServerAction) -> bool:
         '''
         Checks whether the module is allowed 
@@ -58,7 +58,7 @@ class DataService:
             
         return True
     
-    def prepare_module(self, module: ConnectedModuleType) -> bool:
+    def prepare_module(self, module: IConnectedModule) -> bool:
         '''Performs the initial preparing for the module.'''
         web_serv = WebPageService(module.module_name, module.config_module)
         if not web_serv.get_preparing(module_name=module.module_name): 
@@ -66,7 +66,7 @@ class DataService:
         return True
 
     def parse_for_selected_module(self, selected_modules: 
-                                  typ.Dict[ServerAction, ConnectedModuleType]
+                                  typ.Dict[ServerAction, IConnectedModule]
                                  ) -> typ.NoReturn:
         '''Launches parsing for the selected module.'''
         action = ServerAction.PARSE
@@ -82,7 +82,7 @@ class DataService:
                           f"for module {module.module_name} finish.\n")
 
     def get_dump(self, selected_modules: 
-                 typ.Dict[ServerAction, ConnectedModuleType]
+                 typ.Dict[ServerAction, IConnectedModule]
                 ) -> typ.Union[None, AnimeByWatchList]:
         '''
         Prepares the query module and tries to get the dump titles. 
@@ -110,7 +110,7 @@ class DataService:
         return titles_dump
     
     def export_for_selected_module(self, selected_modules: 
-                                   typ.Dict[ServerAction, ConnectedModuleType]
+                                   typ.Dict[ServerAction, IConnectedModule]
                                   ) -> typ.NoReturn:
         '''Launches export for the selected module.'''
         action = ServerAction.EXPORT
@@ -131,7 +131,7 @@ class DataService:
                           f"for module {main_module.module_name} finish.\n")
 
     def processing_for_selected_module(self, action: ServerAction, 
-                                       selected_modules: typ.Dict[ServerAction, ConnectedModuleType]
+                                       selected_modules: typ.Dict[ServerAction, IConnectedModule]
                                       ) -> typ.NoReturn:
         '''Performs the specified action for the selected module.'''
         act_for_mod  = dict({
@@ -369,7 +369,7 @@ class SessionService:
                     not session[cls._slct_setting_tab]:
             cls.session_selected_setting_tab.fset(cls, ActionModule.PARSER)
 
-    def set_filled_settings(self, selected_module: ConnectedModuleType,
+    def set_filled_settings(self, selected_module: IConnectedModule,
                             cookies: Cookies) -> typ.NoReturn:
         '''
         Sets the session keys for html-form - setting up.
@@ -395,8 +395,8 @@ class CacheService:
         _key_parsed_titles: AnimeByWatchList,
         _key_exported_titles: AnimeByWatchList,
         _key_proc_status: typ.Dict,
-        _key_selected_parser: ConnectedModuleType,
-        _key_selected_exporter: ConnectedModuleType,
+        _key_selected_parser: IConnectedModule,
+        _key_selected_exporter: IConnectedModule,
         _key_running_task: typ.Union[None, CeleryTask]
     })
     
@@ -455,30 +455,30 @@ class CacheService:
         _ = flask_cache.set(self._key_running_task, None)
 
     @property
-    def cached_parser_module(self) -> ConnectedModuleType:
+    def cached_parser_module(self) -> IConnectedModule:
         '''
         '''
         return flask_cache.get(self._key_selected_parser)
     
     @cached_parser_module.setter
-    def cached_parser_module(self, value: ConnectedModuleType) -> typ.NoReturn:
+    def cached_parser_module(self, value: IConnectedModule) -> typ.NoReturn:
         '''
         '''
         _ = flask_cache.set(self._key_selected_parser, value)
 
     @property
-    def cached_exporter_module(self) -> ConnectedModuleType:
+    def cached_exporter_module(self) -> IConnectedModule:
         '''
         '''
         return flask_cache.get(self._key_selected_exporter)
     
     @cached_exporter_module.setter
-    def cached_exporter_module(self, value: ConnectedModuleType) -> typ.NoReturn:
+    def cached_exporter_module(self, value: IConnectedModule) -> typ.NoReturn:
         '''
         '''
         _ = flask_cache.set(self._key_selected_exporter, value)
 
-    def get_cached_platform(self, module: ActionModule) -> ConnectedModuleType:
+    def get_cached_platform(self, module: ActionModule) -> IConnectedModule:
         '''
         '''
         platform = None
@@ -488,7 +488,7 @@ class CacheService:
             platform = self.cached_exporter_module
         return platform
 
-    def set_cached_platform(self, module: ActionModule, value: ConnectedModuleType) -> typ.NoReturn:
+    def set_cached_platform(self, module: ActionModule, value: IConnectedModule) -> typ.NoReturn:
         '''
         '''
         if module.value is self._key_selected_parser:
@@ -571,14 +571,14 @@ class RequestService:
             cmd = AjaxCommand.DEFAULT
         return cmd
 
-    def get_passed_selected_module(self) -> typ.Union[ConnectedModuleType, None]:
+    def get_passed_selected_module(self) -> typ.Union[IConnectedModule, None]:
         '''
         Returns the selected module passed from jQuery ajax.
         '''
         selected_module = request.form.get(self._ajax_key_slct_module)
         try:
             _coincidence = NameToModuleCompatibility[selected_module]
-            selected_module: ConnectedModuleType = _coincidence.value
+            selected_module: IConnectedModule = _coincidence.value
         except:
             selected_module = None
         return selected_module

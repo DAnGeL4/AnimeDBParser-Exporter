@@ -7,13 +7,13 @@ from pydantic import AnyHttpUrl
 
 #Custom imports
 from configs.settings import AnimeInfoType, WebPage, AnimeType, AnimeStatuse
-from configs.abstract_classes import WebPageParserAbstract
+from lib.interfaces import IWebPageParser
 from lib.tools import OutputLogger
 #--Finish imports block
 
 
 #--Start functional block
-class WebPageParser(WebPageParserAbstract):
+class WebPageParser(IWebPageParser):
     '''
     The class contains methods for parsing 
     the anime information from Animebuff.ru site 
