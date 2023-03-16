@@ -76,6 +76,7 @@ FLASK_SESSION_TIME_TO_LIVE = FLASK_TIME_TO_LIVE
 FLASK_CACHE_TIME_TO_LIVE = FLASK_TIME_TO_LIVE
 FLASK_SESSION_TYPE = 'filesystem'
 FLASK_CACHE_TYPE = 'filesystem'
+TITLES_DUMP_KEY_ERRORS = 'errors'
 #---
 
 # Web Protocols
@@ -155,6 +156,13 @@ class RequestMethod(Enum):
     HEAD = "HEAD"
     PATCH = "PATCH"
     OPTIONS = "OPTIONS"
+
+
+class EnabledDataHandler(Enum):
+    '''Contains types of data handlers.'''
+    JSON = "json"
+    CACHE = "cache"
+    REDIS = "redis"
 
 
 class WatchListType(Enum):
@@ -263,13 +271,15 @@ TitleDump: typ.Dict = AnimeInfoType
 TitleDumpByKey = typ.Dict[str, LinkedAnimeInfoType]
 AnimeByWatchList = typ.Dict[WatchListType, TitleDumpByKey]
 
+DEFAULT_DATA_HANDLER = EnabledDataHandler.JSON
+
 ProcessedTitlesDump: typ.Union[str,
                                AnimeByWatchList] = tp_fc.build_dataclass_type(
                                    name='ProcessedTitlesDump',
                                    fields_types=[TitleDumpByKey] *
                                    8,  #len(fields_container), 
                                    fields_container=list(WatchListType) +
-                                   ['errors'],
+                                   [TITLES_DUMP_KEY_ERRORS],
                                    functions=['asdict'])
 #---
 
