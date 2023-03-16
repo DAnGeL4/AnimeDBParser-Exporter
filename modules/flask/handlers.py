@@ -8,7 +8,7 @@ from pathlib import Path
 
 #Custom imports
 from configs.settings import (
-    JSON_DUMPS_DIR, WatchListType
+    JSON_DUMPS_DIR, WatchListType, EnabledDataHandler,
 )
 from lib.interfaces import IDataHandler
 from lib.tools import OutputLogger
@@ -109,5 +109,93 @@ class JSONDataHandler(IDataHandler):
         Stores data in the destination json file.
         '''
         return self._save_data_to_json(*args, **kwargs)
+
+        
+class CacheDataHandler(IDataHandler):
+
+    def __init__(self, data: dict = dict(), module_name: str = '',
+                 queue: mp.Queue = None, **kwargs):
+        _ = super().__init__(dict(data))
+        self._module_name = module_name
+                     
+        logger_arg_name = 'logger'
+        if logger_arg_name in kwargs:
+            self._logger = kwargs[logger_arg_name]
+        else:
+            self._logger = OutputLogger(duplicate=True,
+                                        queue=queue,
+                                        name="cache_handler"
+                                       ).logger
+
+    def __setitem__(self, key, item):
+        if type(item) is dict:
+            logger = None
+            
+            if hasattr(self, '_logger'):
+                logger=self._logger
+                
+            item = self.__class__(item, logger=logger)
+            
+        self.__dict__[key] = item
+
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def __repr__(self):
+        return repr(self.__dict__)
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __delitem__(self, key):
+        del self.__dict__[key]
+
+    def clear(self):
+        return self.__dict__.clear()
+
+    def copy(self):
+        return self.__dict__.copy()
+
+    def has_key(self, k):
+        return k in self.__dict__
+
+    def update(self, *args, **kwargs):
+        return self.__dict__.update(*args, **kwargs)
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def values(self):
+        return self.__dict__.values()
+
+    def items(self):
+        return self.__dict__.items()
+
+    def pop(self, *args):
+        return self.__dict__.pop(*args)
+
+    def __cmp__(self, dict_):
+        return self.__cmp__(self.__dict__, dict_)
+
+    def __contains__(self, item):
+        return item in self.__dict__
+
+    def __iter__(self):
+        return iter(self.__dict__)
+
+    def __unicode__(self):
+        return repr(self.__dict__)
+        
+
+
+class RedisDataHndler:
+    pass
+    
+
+DataHandlersCompatibility: typ.Dict[EnabledDataHandler, IDataHandler] = {
+    EnabledDataHandler.JSON: JSONDataHandler,
+    EnabledDataHandler.CACHE: CacheDataHandler,
+    EnabledDataHandler.REDIS: RedisDataHndler
+}
 
 #--Finish functional block
