@@ -3,7 +3,7 @@
 import re
 import urllib.parse
 import typing as typ
-import multiprocessing as mp
+import billiard as mp
 from pathlib import Path
 from pydantic import AnyHttpUrl
 from concurrent import futures as fts
@@ -13,11 +13,12 @@ from configs.settings import (
     RequestMethod, WebPage,
     AnimeInfoType, LinkedAnimeInfoType, AnimeByWatchList,
     TitleDump, WatchListType, TitleDumpByKey,
-    USE_MULTITHREADS
+    USE_MULTITHREADS, DEFAULT_DATA_HANDLER
 )
-from lib.interfaces import IConnectedModule
+from lib.interfaces import IConnectedModule, IDataHandler
 from lib.tools import OutputLogger, ListenerLogger
 from .web_page_tools import WebPageService, WebPageParser
+from modules.flask.data_handlers import DataHandlersCompatibility
 #--Finish imports block
 
 
@@ -33,6 +34,7 @@ class TitleExporter:
         self._config_mod = self._module.config_module
         self._parser_mod = self._module.parser_module
         self._error_titles_file = "error_titles.json"
+        self._loader: IDataHandler = DataHandlersCompatibility[DEFAULT_DATA_HANDLER]
                          
         self._type = None
         self._parser = WebPageParser(self._module, self._type)
@@ -162,12 +164,15 @@ class TitleExporter:
                           f"requested module ({mod_name})...")
             
         json_dump_name = self.get_json_dump_name(mod_name, user_num, file_name)
-                            
-        web_serv = WebPageService(self._module_name, self._config_mod)
-        json_data = web_serv.load_json_data(mod_name, json_dump_name)
+
+        data = self._loader(module_name=self._module_name, 
+                            queue=self._queue,
+                            dump_file_name=json_dump_name)
+        _ = data.load_data()
         
-        if json_data: self._logger.success("...dump taken.\n")
-        return json_data    
+        if data: self._logger.success("...dump taken.\n")
+        else: self._logger.error("...could not get a dump.\n")
+        return data
     
     def save_error_titles(self, error_titles) -> typ.NoReturn:
         '''
@@ -181,11 +186,14 @@ class TitleExporter:
             
         json_dump_name = self.get_json_dump_name(mod_name, user_num, file_name)
                             
-        web_serv = WebPageService(self._module_name, self._config_mod)
-        json_data = web_serv.save_data_to_json(mod_name, json_dump_name, 
-                                               error_titles)
+        data = self._loader(module_name=self._module_name, 
+                            queue=self._queue,
+                            dump_file_name=json_dump_name)
+        _ = data.update(dict(error_titles))
+        res = data.save_data()
         
-        if json_data: self._logger.success("...error titles saved.\n")
+        if res: self._logger.success("...error titles saved.\n")
+        else: self._logger.error("...not saved.\n")
         return None
 
     def print_error_titles(self, error_titles: typ.Dict[str, list]) -> typ.NoReturn:

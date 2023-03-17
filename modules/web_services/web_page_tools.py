@@ -5,7 +5,7 @@ import json
 import types
 import inspect
 import typing as typ
-import multiprocessing as mp
+import billiard as mp
 from concurrent import futures as fts
 from pathlib import Path
 from pydantic import AnyHttpUrl
@@ -13,15 +13,17 @@ from pydantic import AnyHttpUrl
 #Custom imports
 from configs.settings import (
     WEB_PAGES_DIR, RELOAD_WEB_PAGES, USE_MULTITHREADS,
-    JSON_DUMPS_DIR, UPDATE_JSON_DUMPS,
-    WatchListType, AnimeByWatchList,
-    WebPage, RequestMethod,
+    JSON_DUMPS_DIR, UPDATE_JSON_DUMPS, 
+    DEFAULT_DATA_HANDLER, TITLES_DUMP_KEY_ERRORS,
+    WatchListType, WebPage, RequestMethod,
 )
 from lib.interfaces import (
-    ISiteSettings, IWebPageParser, IConnectedModule
+    ISiteSettings, IWebPageParser, 
+    IConnectedModule, IDataHandler
 )
 from lib.tools import OutputLogger, ListenerLogger
 from lib.requests_connections import RequestsConnections
+from modules.flask.data_handlers import DataHandlersCompatibility
 #--Finish imports block
 
 
@@ -167,16 +169,17 @@ class WebPageService:
                           page_filename: str = None,
                           url: AnyHttpUrl = None,
                           method: RequestMethod = RequestMethod.GET,
-                          save_page: bool = True) -> WebPage:
+                          save_page: bool = True,
+                          reload_page: bool = False) -> WebPage:
         '''
         Returns the web-page by passing all the checks.
         '''
         web_page = None
         req_conn = RequestsConnections(self._module_name, self.config_module,
                                        self._queue)
-
-        if self.is_exist_web_page_file(
-                type, page_filename) and not RELOAD_WEB_PAGES:
+                    
+        if not RELOAD_WEB_PAGES and not reload_page and \
+                              self.is_exist_web_page_file(type, page_filename):
             web_page = self.load_web_page_file(type, page_filename)
 
         else:
@@ -201,7 +204,7 @@ class WebPageService:
                 json_data = json.load(file)
         except:
             self._logger.error("...error.")
-            return None
+            json_data = None
 
         if not json_data:
             self._logger.error("...error.")
@@ -268,12 +271,17 @@ class WebPageParser(IWebPageParser):
                                             self._module.json_dump_name
         self._json_dump_name = self._module_name + "/" + json_file_name
 
+        data_handler: IDataHandler = DataHandlersCompatibility[DEFAULT_DATA_HANDLER]
+        self.data = data_handler(module_name=self._module_name, 
+                                 queue=self._queue,
+                                 dump_file_name=self._json_dump_name)
+
         self._parser_mod.__init__(self, self._mg_url, self._queue)
         self._init_methods()
 
     def _init_methods(self) -> typ.NoReturn:
         '''
-        Copies the methods of the implemented IWebPageParser 
+        Copies the methods of the implemented WebPageParserAbstract 
         child class for the common(this) child class.
         
         ! Not worked with multiprocessing tools !
@@ -288,20 +296,18 @@ class WebPageParser(IWebPageParser):
 
     def log_parser_errors(
             self,
-            error_web_pages: typ.List[typ.Dict[str,
-                                               AnyHttpUrl]]) -> typ.NoReturn:
+            error_web_pages: typ.Dict[str, AnyHttpUrl]) -> typ.NoReturn:
         '''Prints error messages for aborted web-pages.'''
-        for error_page in error_web_pages:
-            if error_page is None: continue
-            key, url = list(error_page.items())[0]
+        for key, url in error_web_pages.items():
             self._logger.critical(
                 f"Aborted:\n* Page key: {key};\n* Page URL: {url}\n")
 
-    def _is_update_needed(
-            self, anime_key: str, json_data: AnimeByWatchList
-    ) -> typ.Union[None, WebPageService]:
+        self.data.prepare_data(TITLES_DUMP_KEY_ERRORS)
+        self.data[TITLES_DUMP_KEY_ERRORS].update(error_web_pages)
+
+    def _is_update_needed(self, anime_key: str) -> bool:
         '''Check the need to update the json dump.'''
-        if anime_key in json_data[self._type.value]:
+        if anime_key in self.data[self._type.value]:
             self._logger.info("...record already exists...")
             if not UPDATE_JSON_DUMPS:
                 self._logger.info("...canceled. Updates are not needed.\n")
@@ -323,14 +329,13 @@ class WebPageParser(IWebPageParser):
 
     @ListenerLogger.send_stop_msg
     def get_anime_info_json(
-        self, anime_item: typ.Tuple[str, AnyHttpUrl],
-        json_data: AnimeByWatchList
+        self, anime_item: typ.Tuple[str, AnyHttpUrl]
     ) -> typ.Union[typ.Dict[str, AnyHttpUrl], None]:
         '''Updates JSON DUMP if there is no anime info.'''
         anime_key, anime_url = anime_item
 
         self._logger.info(f"Updating JSON dump for key {anime_key}....")
-        if not self._is_update_needed(anime_key, json_data):
+        if not self._is_update_needed(anime_key):
             return None
 
         web_page = self._get_web_page(*anime_item)
@@ -338,19 +343,17 @@ class WebPageParser(IWebPageParser):
             return dict({anime_key: anime_url})
 
         anime_info = self.get_anime_info(web_page)
-        json_data[self._type.value].update({anime_key: anime_info.asdict()})
-        #Insert a save to db
+        self.data[self._type.value].update({anime_key: anime_info.asdict()})
 
         self._logger.info("...JSON dump updated.\n")
         return None
 
     @ListenerLogger.listener_preparing
     def get_anime_data_in_multithreads(
-        self, all_anime_urls: typ.Dict[str, AnyHttpUrl],
-        json_data: AnimeByWatchList
-    ) -> typ.List[typ.Dict[str, AnyHttpUrl]]:
+        self, all_anime_urls: typ.Dict[str, AnyHttpUrl]
+    ) -> typ.Dict[str, AnyHttpUrl]:
         '''Gets anime data in multi-threads.'''
-        error_web_pages = list()
+        error_web_pages = dict()
 
         with fts.ThreadPoolExecutor(max_workers=mp.cpu_count()) as executor:
             futures = []
@@ -358,55 +361,54 @@ class WebPageParser(IWebPageParser):
             for anime_item in all_anime_urls.items():
                 futures.append(
                     executor.submit(self.get_anime_info_json,
-                                    anime_item=anime_item,
-                                    json_data=json_data))
+                                    anime_item=anime_item))
 
             for future in fts.as_completed(futures):
-                error_web_pages.append(future.result())
+                item = future.result()
+                if item: 
+                    error_web_pages.update(item)
 
         return error_web_pages
 
     def get_anime_data_in_order(
-        self, all_anime_urls: typ.Dict[str, AnyHttpUrl],
-        json_data: AnimeByWatchList
-    ) -> typ.List[typ.Dict[str, AnyHttpUrl]]:
+        self, all_anime_urls: typ.Dict[str, AnyHttpUrl]
+    ) -> typ.Dict[str, AnyHttpUrl]:
         '''Gets anime data in one stream.'''
-        error_web_pages = list()
+        error_web_pages = dict()
+        
         for anime_item in all_anime_urls.items():
-            error_web_pages.append(
-                self.get_anime_info_json(anime_item, json_data))
+            item = self.get_anime_info_json(anime_item)
+            
+            if item: 
+                error_web_pages.update(item)
 
         return error_web_pages
 
-    def get_anime_data(
-            self, web_page: WebPage,
-            json_data: AnimeByWatchList) -> AnimeByWatchList:
+    def get_anime_data(self, web_page: WebPage) -> typ.NoReturn:
         '''Gets anime data for all links.'''
         error_web_pages = list()
         all_anime_urls = self.get_typed_anime_list(web_page)
 
         if USE_MULTITHREADS:
             error_web_pages = self.get_anime_data_in_multithreads(
-                all_anime_urls, json_data)
+                                                        all_anime_urls)
         else:
-            error_web_pages = self.get_anime_data_in_order(
-                all_anime_urls, json_data)
+            error_web_pages = self.get_anime_data_in_order(all_anime_urls)
 
-        self.log_parser_errors(error_web_pages)
-        return json_data
+        _ = self.log_parser_errors(error_web_pages)
 
     def parse_typed_watchlist(self) -> typ.NoReturn:
         '''Parses the data of all anime titles in a typed watchlist.'''
-        web_page = self._web_serv.get_web_page_file(type=self._type)
+        web_page = self._web_serv.get_web_page_file(type=self._type, 
+                                                    reload_page=True)
         if web_page is None: return
 
-        json_data = self._web_serv.load_json_data(self._module_name,
-                                                  self._json_dump_name)
-        json_data = self._web_serv.prepare_json_data(json_data, self._type)
-        json_data = self.get_anime_data(web_page, json_data)
+        _ = self.data.load_data()
+        _ = self.data.prepare_data(self._type)
+        
+        _ = self.get_anime_data(web_page)
 
-        _ = self._web_serv.save_data_to_json(self._module_name,
-                                             self._json_dump_name, json_data)
+        _ = self.data.save_data()
 
 
 #--Finish functional block
