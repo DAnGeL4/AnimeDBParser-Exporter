@@ -8,18 +8,18 @@ from multiprocessing import Queue
 from requests.cookies import RequestsCookieJar
 
 #Custom imports
-from configs.abstract_classes import SiteSettings
 from configs.settings import WebPage, Session, WatchListType, RequestMethod
-from lib.proxy_checker import ProxyChecker
-from lib.tools import OutputLogger
+from .interfaces import ISiteSettings
+from .proxy_checker import ProxyChecker
+from .tools import OutputLogger
 #--Finish imports block
 
 
 #--Start functional block
-class RequestsConnections(SiteSettings):
+class RequestsConnections(ISiteSettings):
     '''A class for working with requests connections.'''
 
-    def __init__(self, module_name: str, config_obj: SiteSettings, queue: Queue=None):
+    def __init__(self, module_name: str, config_obj: ISiteSettings, queue: Queue=None):
         self._module_name = module_name
         self._queue = queue
         _redir_out = OutputLogger(duplicate=True, queue=self._queue,

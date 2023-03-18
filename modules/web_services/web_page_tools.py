@@ -1,7 +1,6 @@
 #--Start imports block
 #System imports
 import os
-import json
 import types
 import inspect
 import typing as typ
@@ -13,8 +12,7 @@ from pydantic import AnyHttpUrl
 #Custom imports
 from configs.settings import (
     WEB_PAGES_DIR, RELOAD_WEB_PAGES, USE_MULTITHREADS,
-    JSON_DUMPS_DIR, UPDATE_JSON_DUMPS, 
-    DEFAULT_DATA_HANDLER, TITLES_DUMP_KEY_ERRORS,
+    UPDATE_JSON_DUMPS, DEFAULT_DATA_HANDLER, TITLES_DUMP_KEY_ERRORS,
     WatchListType, WebPage, RequestMethod,
 )
 from lib.interfaces import (
@@ -23,7 +21,7 @@ from lib.interfaces import (
 )
 from lib.tools import OutputLogger, ListenerLogger
 from lib.requests_connections import RequestsConnections
-from modules.flask.data_handlers import DataHandlersCompatibility
+from modules.flask.handlers import DataHandlersCompatibility
 #--Finish imports block
 
 
@@ -189,61 +187,6 @@ class WebPageService:
                 _ = self.save_web_page(type, page_filename, web_page)
 
         return web_page
-
-    def load_json_data(self, module_name: str,
-                       json_dump_name: str) -> typ.Dict[str, typ.Any]:
-        '''
-        Loads JSON data from a file for a specific module.
-        '''
-        json_data = None
-        file_path = os.path.join(JSON_DUMPS_DIR, json_dump_name)
-
-        self._logger.info(f"Loading json dump for {module_name} module...")
-        try:
-            with open(file_path) as file:
-                json_data = json.load(file)
-        except:
-            self._logger.error("...error.")
-            json_data = None
-
-        if not json_data:
-            self._logger.error("...error.")
-            return None
-
-        self._logger.success("...loaded.")
-        return json_data
-
-    def prepare_json_data(self, json_data: typ.Dict[str, typ.Any],
-                          type: WatchListType) -> typ.Dict[str, typ.Any]:
-        '''
-        Prepares data into a valid format for JSON.
-        '''
-        json_data = dict() if not json_data else json_data
-        if not type.value in json_data:
-            json_data[type.value] = dict()
-
-        return json_data
-
-    def save_data_to_json(self, module_name: str, json_dump_name: str,
-                          json_data: typ.Dict[str, typ.Any]) -> bool:
-        '''
-        Saves anime data in JSON format to a file 
-        for a specific module.
-        '''
-        file_path = os.path.join(JSON_DUMPS_DIR, json_dump_name)
-        json_object = json.dumps(json_data, indent=4, ensure_ascii=False)
-
-        self._logger.info(f"Saving json dump for {module_name} module...")
-
-        try:
-            with open(file_path, 'w') as file:
-                file.write(json_object)
-        except:
-            self._logger.error("...error.")
-            return False
-
-        self._logger.success("...saved.")
-        return True
 
 
 class WebPageParser(IWebPageParser):

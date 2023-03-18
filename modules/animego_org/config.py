@@ -1,22 +1,24 @@
 #--Start imports block
 #System imports
-import json
 import typing as typ
 from string import Template
 from bs4 import BeautifulSoup
 from requests.structures import CaseInsensitiveDict
 
 #Custom imports
-from configs import settings as cfg
-from lib import interfaces as ac
+from configs.settings import (
+    REQUEST_PROXIES_FORMAT, 
+    Cookies, JSON, WebPage
+)
+from lib.interfaces import ISiteSettings
 #--Finish imports block
 
 
 #--Start global constants block
-class AnimeGoOrgConfig(ac.ISiteSettings):
+class AnimeGoOrgConfig(ISiteSettings):
     '''Configuration for site animego.org.'''
     use_proxy = True
-    proxies = cfg.REQUEST_PROXIES_FORMAT
+    proxies = REQUEST_PROXIES_FORMAT
     
     url_domain = "animego.org"
     url_general = f"https://{url_domain}"
@@ -39,10 +41,10 @@ class AnimeGoOrgConfig(ac.ISiteSettings):
         ("Content-Type", "application/json")
     ])
 
-    def __init__(self, unproc_cookies: typ.Union[str, cfg.Cookies, cfg.JSON]) -> typ.NoReturn:
+    def __init__(self, unproc_cookies: typ.Union[str, Cookies, JSON]) -> typ.NoReturn:
         _ = super().__init__(unproc_cookies=unproc_cookies)
         
-    def make_preparing(self, web_page: cfg.WebPage, **kwargs) -> bool:
+    def make_preparing(self, web_page: WebPage, **kwargs) -> bool:
         '''
         Performs the initial preparation of the configuration module.
         Gets a profile identifier and corrects watchlists url.

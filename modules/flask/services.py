@@ -5,7 +5,7 @@ import typing as typ
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path as PathType
 from flask import request, render_template, session
-from celery import Task as CeleryTask
+from flask_caching import Cache
 
 #Custom imports
 from configs.settings import (
@@ -13,15 +13,15 @@ from configs.settings import (
     ActionToModuleCompatibility, AjaxCommand, ResponseStatus,
     TEMPLATES_DIR,
     WatchListType, AnimeByWatchList, ProcessedTitlesDump, 
-    Session, Cookies, JSON, WebPagePart, WebPage
-)
-from configs.connected_modules import (
-    EnabledParserModules, EnabledExporterModules,
-    NameToModuleCompatibility, EnabledModules
+    Session, Cookies, JSON, WebPagePart, WebPage, CeleryTaskID
 )
 from lib.interfaces import IConnectedModule
 from lib.tools import OutputLogger, is_allowed_action
 from modules.common.application_objects import flask_cache
+from modules.common.connected_modules import (
+    EnabledParserModules, EnabledExporterModules,
+    NameToModuleCompatibility, EnabledModules
+)
 from modules.web_services.web_page_tools import WebPageService, WebPageParser
 from modules.web_services.web_exporter import TitleExporter
 #--Finish imports block
@@ -32,14 +32,14 @@ from modules.web_services.web_exporter import TitleExporter
 
 
 #--Start functional block
-class DataService:
+class ActionService:
     '''
     Contains methods for working 
     with data for the flask app.
     '''
     def __init__(self):
-        self.logger = OutputLogger(duplicate=True, 
-                                   name="data_serv").logger
+        self._logger = OutputLogger(duplicate=True, 
+                                   name="act_serv").logger
 
     def checking_module(self, module: IConnectedModule, 
                         action: ServerAction) -> bool:
@@ -48,11 +48,11 @@ class DataService:
         and whether the action is enabled.
         '''
         if not is_allowed_action(action):
-            self.logger.error(f"{action.name} action disabled.\n")
+            self._logger.error(f"{action.name} action disabled.\n")
             return False
             
         if type(module) not in EnabledModules[action.value].value:
-            self.logger.error(f"{action.name} action for module " + 
+            self._logger.error(f"{action.name} action for module " + 
                               f"{module.module_name} are disabled.\n")
             return False
             
@@ -72,13 +72,17 @@ class DataService:
         action = ServerAction.PARSE
         module = selected_modules[action]
                                      
-        self.logger.info("* Start parsing action " +
+        self._logger.info("* Start parsing action " +
                           f"for module {module.module_name}...\n")
 
         if not self.checking_module(module, action): return
         if not self.prepare_module(module): return
             
-        self.logger.info("* ...parsing action " + 
+        for type in WatchListType:
+            page_parser = WebPageParser(module, type)
+            page_parser.parse_typed_watchlist()
+            
+        self._logger.info("* ...parsing action " + 
                           f"for module {module.module_name} finish.\n")
 
     def get_dump(self, selected_modules: 
@@ -97,14 +101,14 @@ class DataService:
         titles_dump = te.get_titles_dump(query_module)
                      
         if not titles_dump: 
-            self.logger.warning("Dump not exist. Trying reparse module " + 
+            self._logger.warning("Dump not exist. Trying reparse module " + 
                                 f"({main_module.module_name})...")
             
             _ = self.parse_for_selected_module(selected_modules)
             titles_dump = te.get_titles_dump(query_module)
             
             if not titles_dump: 
-                self.logger.critical("Dump not exist.")
+                self._logger.critical("Dump not exist.")
                 return None
                 
         return titles_dump
@@ -116,7 +120,7 @@ class DataService:
         action = ServerAction.EXPORT
         main_module = selected_modules[action]
                                       
-        self.logger.info("* Start export action " + 
+        self._logger.info("* Start export action " + 
                           f"for module {main_module.module_name}...\n")
                                       
         if not self.checking_module(main_module, action): return
@@ -127,7 +131,7 @@ class DataService:
             te = TitleExporter(main_module)
             _ = te.export_titles_dump(titles_dump)
         
-        self.logger.info("* ...export action " + 
+        self._logger.info("* ...export action " + 
                           f"for module {main_module.module_name} finish.\n")
 
     def processing_for_selected_module(self, action: ServerAction, 
@@ -139,9 +143,9 @@ class DataService:
             ServerAction.EXPORT: self.export_for_selected_module
         })
                             
-        self.logger.info(f"** BEGIN PROCESSING BLOCK ({action.name}) **")
+        self._logger.info(f"** BEGIN PROCESSING BLOCK ({action.name}) **")
         _ = act_for_mod[action](selected_modules)
-        self.logger.info(f"** END PROCESSING BLOCK ({action.name}) **\n")
+        self._logger.info(f"** END PROCESSING BLOCK ({action.name}) **\n")
 
     def get_parse_modules(self) -> typ.List[str]:
         '''
@@ -341,10 +345,10 @@ class SessionService:
         Checks whether the keys of html form 
         are kept in the flask session.
         '''
-        dt_srv = DataService()
+        act_srv = ActionService()
         for module, f_get_data in {
-                ActionModule.PARSER: dt_srv.get_parse_modules,
-                ActionModule.EXPORTER: dt_srv.get_export_modules
+                ActionModule.PARSER: act_srv.get_parse_modules,
+                ActionModule.EXPORTER: act_srv.get_export_modules
         }.items():
 
             if module.value not in session:
@@ -391,95 +395,110 @@ class CacheService:
     _key_selected_exporter = ActionModule.EXPORTER.value
     _key_running_task = 'running_tasks'
 
-    __cache_structure: Session = dict({
+    __cache_structure: Cache = dict({
         _key_parsed_titles: AnimeByWatchList,
         _key_exported_titles: AnimeByWatchList,
         _key_proc_status: typ.Dict,
         _key_selected_parser: IConnectedModule,
         _key_selected_exporter: IConnectedModule,
-        _key_running_task: typ.Union[None, CeleryTask]
+        _key_running_task: typ.Union[None, CeleryTaskID]
     })
     
     @property
-    def cached_parsed_titles(self):
+    def cached_parsed_titles(self) -> AnimeByWatchList:
         '''
+        Returns a cached dump of parsed titles.
         '''
         return flask_cache.get(self._key_parsed_titles)
 
     @cached_parsed_titles.setter
-    def cached_parsed_titles(self, value) -> typ.NoReturn:
+    def cached_parsed_titles(self, value: AnimeByWatchList) -> typ.NoReturn:
         '''
+        Stores a dump of parsed titles in the cache.
         '''
         _ = flask_cache.set(self._key_parsed_titles, value)
     
     @property
-    def cached_exported_titles(self):
+    def cached_exported_titles(self) -> AnimeByWatchList:
         '''
+        Returns a cached dump of exported titles.
         '''
         return flask_cache.get(self._key_exported_titles)
     
     @cached_exported_titles.setter
-    def cached_exported_titles(self, value) -> typ.NoReturn:
+    def cached_exported_titles(self, value: AnimeByWatchList) -> typ.NoReturn:
         '''
+        Stores a dump of exported titles in the cache.
         '''
         _ = flask_cache.set(self._key_exported_titles, value)
 
     @property
-    def cached_proc_status(self):
+    def cached_proc_status(self) -> dict:
         '''
+        Returns the stored status of the task execution process.
         '''
         return flask_cache.get(self._key_proc_status)
     
     @cached_proc_status.setter
-    def cached_proc_status(self, value) -> typ.NoReturn:
+    def cached_proc_status(self, value: dict) -> typ.NoReturn:
         '''
+        Stores the progress status of a task.
         '''
         _ = flask_cache.set(self._key_proc_status, value)
 
     @property
-    def cached_running_task(self) -> CeleryTask:
+    def cached_running_task(self) -> CeleryTaskID:
         '''
+        Gets the ID of the running task, stored in the cache.
         '''
         return flask_cache.get(self._key_running_task)
 
     @cached_running_task.setter
-    def cached_running_task(self, value: CeleryTask) -> typ.NoReturn:
+    def cached_running_task(self, value: CeleryTaskID) -> typ.NoReturn:
         '''
+        Stores the ID of the running task in the cache.
         '''
         _ = flask_cache.set(self._key_running_task, value)
 
     @cached_running_task.deleter
     def cached_running_task(self) -> typ.NoReturn:
         '''
+        Removes the running task ID from the cache.
         '''
         _ = flask_cache.set(self._key_running_task, None)
 
     @property
     def cached_parser_module(self) -> IConnectedModule:
         '''
+        Returns the deserialized parser platform from the cache.
         '''
         return flask_cache.get(self._key_selected_parser)
     
     @cached_parser_module.setter
     def cached_parser_module(self, value: IConnectedModule) -> typ.NoReturn:
         '''
+        Serializes and caches the parser platform.
         '''
         _ = flask_cache.set(self._key_selected_parser, value)
 
     @property
     def cached_exporter_module(self) -> IConnectedModule:
         '''
+        Returns the deserialized exporter platform from the cache.
         '''
         return flask_cache.get(self._key_selected_exporter)
     
     @cached_exporter_module.setter
     def cached_exporter_module(self, value: IConnectedModule) -> typ.NoReturn:
         '''
+        Serializes and caches the exporter platform.
         '''
         _ = flask_cache.set(self._key_selected_exporter, value)
 
     def get_cached_platform(self, module: ActionModule) -> IConnectedModule:
         '''
+        Returns the deserialized platform module 
+        from the cache by the passed action module.
         '''
         platform = None
         if module.value is self._key_selected_parser:
@@ -490,6 +509,8 @@ class CacheService:
 
     def set_cached_platform(self, module: ActionModule, value: IConnectedModule) -> typ.NoReturn:
         '''
+        Serializes the passed platform module 
+        and caches it by the passed action module.
         '''
         if module.value is self._key_selected_parser:
             self.cached_parser_module = value
@@ -687,19 +708,19 @@ class HTMLRenderingService:
         '''
         Returns the html template for the specified titles list.
         '''
-        dt_srv = DataService()
+        act_srv = ActionService()
         kwargs_cases = dict({
             ActionModule.PARSER: {
                 'template_file': "_template_parsed_titles.html",
                 'kwargs': {
-                    'parsed_titles': dt_srv.get_parsed_titles(counter),
+                    'parsed_titles': act_srv.get_parsed_titles(counter),
                     'selected_tab': selected_tab
                 }
             },
             ActionModule.EXPORTER: {
                 'template_file': "_template_exported_titles.html",
                 'kwargs': {
-                    'exported_titles': dt_srv.get_exported_titles(),
+                    'exported_titles': act_srv.get_exported_titles(),
                     'selected_tab': selected_tab
                 }
             }
@@ -720,10 +741,24 @@ class HTMLRenderingService:
 
     def get_rendered_status_bar(self,
                                 action: ServerAction,
-                                progress_xpnd: bool) -> WebPagePart:
+                                progress_xpnd: bool,
+                                counter: int = None) -> WebPagePart:
         '''
         Returns the html template of status bar with filled data.
         '''
+        act_srv = ActionService()
+        action_data_compatibility = {
+            ServerAction.PARSE: act_srv.get_parsed_titles(counter),
+            ServerAction.EXPORT: act_srv.get_exported_titles()
+        }
+
+        #--must be reworked
+        all_titles_now = 0
+        for wlist in action_data_compatibility[action].keys():
+            all_titles_now += len(
+                action_data_compatibility[action][wlist].keys())
+        current_titles_now = len(
+            action_data_compatibility[action]['watch'].keys())
 
         kwargs = {
             'selected_tab': action.value,
@@ -732,16 +767,17 @@ class HTMLRenderingService:
             'progress': {
                 'status': True,
                 'all': {
-                    'now': 0,
-                    'max': 0
-                },
+                    'now': all_titles_now,
+                    'max': 201
+                },  #gets from profile
                 'current': {
-                    'watchlist': None,
-                    'now': 0,
-                    'max': 0
-                }
+                    'watchlist': 'watch',
+                    'now': current_titles_now,
+                    'max': 10
+                }  #gets from profile
             }
         }
+        #--
 
         template_file = "_template_progress_bar.html"
         return self._get_rendered_template(template_file, kwargs)
