@@ -11,8 +11,8 @@ from flask_caching import Cache
 from configs.settings import (
     ServerAction, AjaxServerResponse, ActionModule,
     ActionToModuleCompatibility, AjaxCommand, ResponseStatus,
-    TEMPLATES_DIR,
-    WatchListType, AnimeByWatchList, ProcessedTitlesDump, 
+    TEMPLATES_DIR, DEFAULT_DATA_HANDLER,
+    WatchListType, AnimeByWatchList, 
     Session, Cookies, JSON, WebPagePart, WebPage, CeleryTaskID
 )
 from lib.interfaces import IConnectedModule
@@ -24,6 +24,7 @@ from modules.common.connected_modules import (
 )
 from modules.web_services.web_page_tools import WebPageService, WebPageParser
 from modules.web_services.web_exporter import TitleExporter
+from .data_handlers import DataHandlersCompatibility
 #--Finish imports block
 
 
@@ -193,19 +194,23 @@ class ActionService:
         })
         return settings
 
-    def get_parsed_titles(self) -> AnimeByWatchList:
+    def get_processed_titles(self, module: ActionModule) -> AnimeByWatchList:
         '''
-        Returns a dump of the parsed titles.
+        Returns a dump of the titles processed by the action module.
         '''
-        parsed_titles = ProcessedTitlesDump()
-        return parsed_titles.asdict()
+        ch_srv = CacheService()
+        data_handler = DataHandlersCompatibility[DEFAULT_DATA_HANDLER]
 
-    def get_exported_titles(self) -> AnimeByWatchList:
-        '''
-        Returns a dump of the exported titles.
-        '''
-        exported_titles = ProcessedTitlesDump()
-        return exported_titles.asdict()
+        titles_data = {}
+        platform = ch_srv.get_cached_platform(module)
+        
+        if platform:
+            dump_file_name = platform.get_json_dump_name()
+            titles_data = data_handler(module_name=platform.module_name, 
+                                       dump_file_name=dump_file_name)
+            _ = titles_data.load_data()
+        
+        return titles_data
 
 
 class SessionService:
@@ -568,9 +573,8 @@ class RequestService:
             module = None
         return module
 
-    def get_module_by_action(
-            self,
-            action: ServerAction) -> typ.Union[ActionModule, None]:
+    def get_module_by_action(self, action: ServerAction
+                            ) -> typ.Union[ActionModule, None]:
         '''
         Returns the module in accordance with the transmitted action.
         '''
@@ -681,6 +685,8 @@ class HTMLRenderingService:
 
     _environment: Environment = None
     _initial_page: str = 'index.html'
+    _parsed_template_file = "_template_parsed_titles.html"
+    _exported_template_file = "_template_exported_titles.html"
 
     def __init__(self,
                  templates_dir: typ.Union[str, PathType] = TEMPLATES_DIR):
@@ -703,24 +709,25 @@ class HTMLRenderingService:
 
     def get_rendered_titles_list(self,
                                  module: ActionModule,
-                                 selected_tab: str,
-                                 counter: int = None) -> WebPagePart:
+                                 selected_tab: str) -> WebPagePart:
         '''
         Returns the html template for the specified titles list.
         '''
         act_srv = ActionService()
+        titles_data = act_srv.get_processed_titles(module)
+                                     
         kwargs_cases = dict({
             ActionModule.PARSER: {
-                'template_file': "_template_parsed_titles.html",
+                'template_file': self._parsed_template_file,
                 'kwargs': {
-                    'parsed_titles': act_srv.get_parsed_titles(counter),
+                    'parsed_titles': titles_data,
                     'selected_tab': selected_tab
                 }
             },
             ActionModule.EXPORTER: {
-                'template_file': "_template_exported_titles.html",
+                'template_file': self._exported_template_file,
                 'kwargs': {
-                    'exported_titles': act_srv.get_exported_titles(),
+                    'exported_titles': titles_data,
                     'selected_tab': selected_tab
                 }
             }
@@ -741,25 +748,10 @@ class HTMLRenderingService:
 
     def get_rendered_status_bar(self,
                                 action: ServerAction,
-                                progress_xpnd: bool,
-                                counter: int = None) -> WebPagePart:
+                                progress_xpnd: bool) -> WebPagePart:
         '''
         Returns the html template of status bar with filled data.
         '''
-        act_srv = ActionService()
-        action_data_compatibility = {
-            ServerAction.PARSE: act_srv.get_parsed_titles(counter),
-            ServerAction.EXPORT: act_srv.get_exported_titles()
-        }
-
-        #--must be reworked
-        all_titles_now = 0
-        for wlist in action_data_compatibility[action].keys():
-            all_titles_now += len(
-                action_data_compatibility[action][wlist].keys())
-        current_titles_now = len(
-            action_data_compatibility[action]['watch'].keys())
-
         kwargs = {
             'selected_tab': action.value,
             'tab_key': action.value,
@@ -767,17 +759,16 @@ class HTMLRenderingService:
             'progress': {
                 'status': True,
                 'all': {
-                    'now': all_titles_now,
-                    'max': 201
-                },  #gets from profile
+                    'now': 0,
+                    'max': 0
+                },
                 'current': {
-                    'watchlist': 'watch',
-                    'now': current_titles_now,
-                    'max': 10
-                }  #gets from profile
+                    'watchlist': None,
+                    'now': 0,
+                    'max': 0
+                } 
             }
         }
-        #--
 
         template_file = "_template_progress_bar.html"
         return self._get_rendered_template(template_file, kwargs)
