@@ -125,7 +125,8 @@ class FlaskFactory:
                                   SESSION_FILE_THRESHOLD=session_thresh,
                                   CACHE_TYPE=cache_type,
                                   CACHE_DIR=cache_dir,
-                                  CACHE_DEFAULT_TIMEOUT=cache_ttl)
+                                  CACHE_DEFAULT_TIMEOUT=cache_ttl,
+                                  CELERY_TASK_TRACK_STARTED=True)
         return application
 
     @classmethod
@@ -153,7 +154,7 @@ class CeleryFactory:
 
     @classmethod
     def make_celery(cls, app: Flask, backend: AnyHttpUrl,
-                    broker: AnyHttpUrl) -> Celery:
+                    broker: AnyHttpUrl, using_serializer: bool) -> Celery:
         '''
         Initializes the Celery application 
         by the Flask application with using 
@@ -161,6 +162,12 @@ class CeleryFactory:
         '''
         celery = Celery(app.import_name, backend=backend, broker=broker)
         celery.conf.update(app.config)
+                        
+        if using_serializer:
+            celery.conf.event_serializer = 'pickle'
+            celery.conf.task_serializer = 'pickle'
+            celery.conf.result_serializer = 'pickle'
+            celery.conf.accept_content = ['application/json', 'application/x-python-serialize']
 
         class ContextTask(celery.Task):
 
