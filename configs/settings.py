@@ -163,6 +163,10 @@ class EnabledDataHandler(Enum):
     JSON = "json"
     CACHE = "cache"
     REDIS = "redis"
+    
+class EnabledProgressHandler(Enum):
+    '''Contains types of data handlers.'''
+    CACHE = "cache"
 
 
 class WatchListType(Enum):
@@ -272,6 +276,7 @@ TitleDumpByKey = typ.Dict[str, LinkedAnimeInfoType]
 AnimeByWatchList = typ.Dict[WatchListType, TitleDumpByKey]
 
 DEFAULT_DATA_HANDLER = EnabledDataHandler.JSON
+DEFAULT_PROGRESS_HANDLER = EnabledProgressHandler.CACHE
 
 ProcessedTitlesDump: typ.Union[str,
                                AnimeByWatchList] = tp_fc.build_dataclass_type(
@@ -281,6 +286,46 @@ ProcessedTitlesDump: typ.Union[str,
                                    fields_container=list(WatchListType) +
                                    [TITLES_DUMP_KEY_ERRORS],
                                    functions=['asdict'])
+
+
+@dcls.dataclass
+class ITitlesProgressStatusCommon:
+    '''
+    Stores the state of the titles processing progress.
+    '''
+    now: int = 0
+    max: int = 0
+    
+@dcls.dataclass
+class TitlesProgressStatusAll(ITitlesProgressStatusCommon):
+    '''
+    Stores the state of the overall progress 
+    of processing titles.
+    '''
+    pass
+
+
+@dcls.dataclass
+class TitlesProgressStatusCurrent(ITitlesProgressStatusCommon):
+    '''
+    Stores the progress status of titles 
+    for the current watchlist.
+    '''
+    watchlist: WatchListType = ''
+
+
+@dcls.dataclass
+class TitlesProgressStatus:
+    '''
+    Container-type to store the progress state 
+    of a running server action.
+    '''
+    status: bool = False
+    all: TitlesProgressStatusAll = TitlesProgressStatusAll()
+    current: TitlesProgressStatusCurrent = TitlesProgressStatusCurrent()
+    
+    def asdict(self):
+        return {k: v for k, v in dcls.asdict(self).items()}
 #---
 
 # Compatibility tables
