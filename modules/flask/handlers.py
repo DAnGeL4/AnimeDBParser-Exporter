@@ -8,9 +8,12 @@ from pathlib import Path
 
 #Custom imports
 from configs.settings import (
-    JSON_DUMPS_DIR, WatchListType, EnabledDataHandler,
+    JSON_DUMPS_DIR, WatchListType, ServerAction,
+    EnabledDataHandler, TitlesProgressStatus, 
+    TitlesProgressStatusCurrent, EnabledProgressHandler,
+    DEFAULT_PROGRESS_HANDLER, DEFAULT_DATA_HANDLER
 )
-from lib.interfaces import IDataHandler
+from lib.interfaces import IDataHandler, IProgressHandler
 from lib.tools import OutputLogger
 #--Finish imports block
 
@@ -190,12 +193,113 @@ class CacheDataHandler(IDataHandler):
 
 class RedisDataHndler:
     pass
-    
+
+
+class CacheProgressHandler(IProgressHandler):
+    '''
+    Contains methods for working with progress data 
+    for a progress bar template.
+    '''
+
+    @property
+    def progress(self) -> typ.Union[TitlesProgressStatus, None]:
+        '''
+        Returns progress data from the storage by action.
+        '''
+        if self._action is ServerAction.PARSE:
+            return self._storage.cached_progress_parser
+            
+        elif self._action is ServerAction.EXPORT:
+            return self._storage.cached_progress_exporter
+            
+        return None
+        
+    @progress.setter
+    def progress(self, progress: TitlesProgressStatus) -> typ.NoReturn:
+        '''
+        Stores progress data in storage by action.
+        '''
+        if self._action is ServerAction.PARSE:
+            self._storage.cached_progress_parser = progress
+        elif self._action is ServerAction.EXPORT:
+            self._storage.cached_progress_exporter = progress
+
+    def initialize_progress(self, status: bool = False,
+                            n_now: int = 0, n_max: int = 0) -> typ.NoReturn:
+        '''
+        Clears progress data from storage 
+        and reinitializes new ones.
+        The current progress is set by default.
+        '''
+        progress = TitlesProgressStatus(status=status)
+        progress.all.now = n_now
+        progress.all.max = n_max
+
+        self.progress = progress
+
+    def initialize_progress_curr(self, watch_list: WatchListType,
+                                   n_now: int = 0, n_max: int = 0) -> typ.NoReturn:
+        '''
+        Initializes the current progress data 
+        and writes to the common progress data in the storage.
+        '''
+        current_progress = TitlesProgressStatusCurrent(
+            now=n_now, max=n_max, watchlist=watch_list.value)
+
+        progress = self.progress
+        progress.current = current_progress
+        self.progress = progress
+
+    def increase_progress_all(self) -> typ.NoReturn:
+        '''
+        Increases the total number of processed titles.
+        '''
+        progress = self.progress
+
+        if progress:
+            progress.all.now += 1
+            self.progress = progress
+
+    def increase_progress_curr(self, inc_prgs_all: bool = True) -> typ.NoReturn:
+        '''
+        Increases the number of processed titles 
+        in the current processing. 
+        Increases the total number 
+        of titles processed, if specified.
+        '''
+        progress = self.progress
+        if progress:
+            progress.current.now += 1
+            
+            if inc_prgs_all:
+                progress.all.now += 1
+                
+            self.progress = progress
+
+    def switch_status(self, status: bool = None) -> typ.NoReturn:
+        '''
+        Toggles the status to the opposite if not specified.
+        '''
+        progress = self.progress
+        
+        if status is None:
+            progress.status = bool(not progress.status)
+        else:
+            progress.status = status
+            
+        self.progress = progress
+
 
 DataHandlersCompatibility: typ.Dict[EnabledDataHandler, IDataHandler] = {
     EnabledDataHandler.JSON: JSONDataHandler,
     EnabledDataHandler.CACHE: CacheDataHandler,
     EnabledDataHandler.REDIS: RedisDataHndler
 }
+ProgressHandlersCompatibility: \
+            typ.Dict[EnabledProgressHandler, IProgressHandler] = {
+    EnabledProgressHandler.CACHE: CacheProgressHandler,
+}
+DefaultDataHandler = DataHandlersCompatibility[DEFAULT_DATA_HANDLER]
+DefaultProgressHandler = ProgressHandlersCompatibility[DEFAULT_PROGRESS_HANDLER]
 
 #--Finish functional block
