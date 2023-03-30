@@ -11,11 +11,12 @@ from flask_caching import Cache
 from configs.settings import (
     ServerAction, AjaxServerResponse, ActionModule,
     ActionToModuleCompatibility, AjaxCommand, ResponseStatus,
-    TEMPLATES_DIR, DEFAULT_DATA_HANDLER,
-    WatchListType, AnimeByWatchList, 
-    Session, Cookies, JSON, WebPagePart, WebPage, CeleryTaskID
+    TEMPLATES_DIR,
+    WatchListType, AnimeByWatchList, Session, Cookies, 
+    JSON, WebPagePart, WebPage, CeleryTaskID,
+    TitlesProgressStatus
 )
-from lib.interfaces import IConnectedModule
+from lib.interfaces import IConnectedModule, IProgressHandler
 from lib.tools import OutputLogger, is_allowed_action
 from modules.common.application_objects import flask_cache
 from modules.common.connected_modules import (
@@ -24,7 +25,7 @@ from modules.common.connected_modules import (
 )
 from modules.web_services.web_page_tools import WebPageService, WebPageParser
 from modules.web_services.web_exporter import TitleExporter
-from .data_handlers import DataHandlersCompatibility
+from .handlers import DefaultDataHandler, DefaultProgressHandler
 #--Finish imports block
 
 
@@ -33,186 +34,6 @@ from .data_handlers import DataHandlersCompatibility
 
 
 #--Start functional block
-class ActionService:
-    '''
-    Contains methods for working 
-    with data for the flask app.
-    '''
-    def __init__(self):
-        self._logger = OutputLogger(duplicate=True, 
-                                   name="act_serv").logger
-
-    def checking_module(self, module: IConnectedModule, 
-                        action: ServerAction) -> bool:
-        '''
-        Checks whether the module is allowed 
-        and whether the action is enabled.
-        '''
-        if not is_allowed_action(action):
-            self._logger.error(f"{action.name} action disabled.\n")
-            return False
-            
-        if type(module) not in EnabledModules[action.value].value:
-            self._logger.error(f"{action.name} action for module " + 
-                              f"{module.module_name} are disabled.\n")
-            return False
-            
-        return True
-    
-    def prepare_module(self, module: IConnectedModule) -> bool:
-        '''Performs the initial preparing for the module.'''
-        web_serv = WebPageService(module.module_name, module.config_module)
-        if not web_serv.get_preparing(module_name=module.module_name): 
-            return False
-        return True
-
-    def parse_for_selected_module(self, selected_modules: 
-                                  typ.Dict[ServerAction, IConnectedModule]
-                                 ) -> typ.NoReturn:
-        '''Launches parsing for the selected module.'''
-        action = ServerAction.PARSE
-        module = selected_modules[action]
-                                     
-        self._logger.info("* Start parsing action " +
-                          f"for module {module.module_name}...\n")
-
-        if not self.checking_module(module, action): return
-        if not self.prepare_module(module): return
-            
-        for type in WatchListType:
-            page_parser = WebPageParser(module, type)
-            page_parser.parse_typed_watchlist()
-            
-        self._logger.info("* ...parsing action " + 
-                          f"for module {module.module_name} finish.\n")
-
-    def get_dump(self, selected_modules: 
-                 typ.Dict[ServerAction, IConnectedModule]
-                ) -> typ.Union[None, AnimeByWatchList]:
-        '''
-        Prepares the query module and tries to get the dump titles. 
-        If the dump is None, the query module is parse.
-        '''
-        main_module = selected_modules[ServerAction.EXPORT]
-        query_module = selected_modules[ServerAction.PARSE]
-                     
-        if not self.prepare_module(query_module): return None
-            
-        te = TitleExporter(main_module)
-        titles_dump = te.get_titles_dump(query_module)
-                     
-        if not titles_dump: 
-            self._logger.warning("Dump not exist. Trying reparse module " + 
-                                f"({main_module.module_name})...")
-            
-            _ = self.parse_for_selected_module(selected_modules)
-            titles_dump = te.get_titles_dump(query_module)
-            
-            if not titles_dump: 
-                self._logger.critical("Dump not exist.")
-                return None
-                
-        return titles_dump
-    
-    def export_for_selected_module(self, selected_modules: 
-                                   typ.Dict[ServerAction, IConnectedModule]
-                                  ) -> typ.NoReturn:
-        '''Launches export for the selected module.'''
-        action = ServerAction.EXPORT
-        main_module = selected_modules[action]
-                                      
-        self._logger.info("* Start export action " + 
-                          f"for module {main_module.module_name}...\n")
-                                      
-        if not self.checking_module(main_module, action): return
-        if not self.prepare_module(main_module): return
-                                      
-        titles_dump = self.get_dump(selected_modules)
-        if titles_dump: 
-            te = TitleExporter(main_module)
-            _ = te.export_titles_dump(titles_dump)
-        
-        self._logger.info("* ...export action " + 
-                          f"for module {main_module.module_name} finish.\n")
-
-    def processing_for_selected_module(self, action: ServerAction, 
-                                       selected_modules: typ.Dict[ServerAction, IConnectedModule]
-                                      ) -> typ.NoReturn:
-        '''Performs the specified action for the selected module.'''
-        act_for_mod  = dict({
-            ServerAction.PARSE: self.parse_for_selected_module,
-            ServerAction.EXPORT: self.export_for_selected_module
-        })
-                            
-        self._logger.info(f"** BEGIN PROCESSING BLOCK ({action.name}) **")
-        _ = act_for_mod[action](selected_modules)
-        self._logger.info(f"** END PROCESSING BLOCK ({action.name}) **\n")
-
-    def get_parse_modules(self) -> typ.List[str]:
-        '''
-        Returns modules avalible for parse action.
-        '''
-        parse_modules = [
-            module.presented_name for module in EnabledParserModules
-        ]
-        return parse_modules
-
-    def get_export_modules(self) -> typ.List[str]:
-        '''
-        Returns modules avalible for export action.
-        '''
-        export_modules = [
-            module.presented_name for module in EnabledExporterModules
-        ]
-        return export_modules
-
-    def get_modules_settings(self) -> typ.Dict[str, dict]:
-        '''
-        Returns the settings for the module form.
-        '''
-        progress_tmpl = dict({
-            'status': False,
-            'all': {
-                'now': 0,
-                'max': 0
-            },
-            'current': {
-                'watchlist': None,
-                'now': 0,
-                'max': 0
-            }
-        })
-        settings = dict({
-            'parse_modules': self.get_parse_modules(),
-            'export_modules': self.get_export_modules(),
-            'parser': {
-                'progress': progress_tmpl
-            },
-            'exporter': {
-                'progress': progress_tmpl
-            }
-        })
-        return settings
-
-    def get_processed_titles(self, module: ActionModule) -> AnimeByWatchList:
-        '''
-        Returns a dump of the titles processed by the action module.
-        '''
-        ch_srv = CacheService()
-        data_handler = DataHandlersCompatibility[DEFAULT_DATA_HANDLER]
-
-        titles_data = {}
-        platform = ch_srv.get_cached_platform(module)
-        
-        if platform:
-            dump_file_name = platform.get_json_dump_name()
-            titles_data = data_handler(module_name=platform.module_name, 
-                                       dump_file_name=dump_file_name)
-            _ = titles_data.load_data()
-        
-        return titles_data
-
-
 class SessionService:
     '''
     Contains methods for working with a flask session.
@@ -392,64 +213,49 @@ class CacheService:
     '''
     Contains methods for working with flask cache.
     '''
-
-    _key_parsed_titles = 'parsed_titles'
-    _key_exported_titles = 'exported_titles'
-    _key_proc_status = 'proc_status'
+    _key_progress_parser = 'parser_progress'
+    _key_progress_exporter = 'exporter_progress'
     _key_selected_parser = ActionModule.PARSER.value
     _key_selected_exporter = ActionModule.EXPORTER.value
     _key_running_task = 'running_tasks'
 
     __cache_structure: Cache = dict({
-        _key_parsed_titles: AnimeByWatchList,
-        _key_exported_titles: AnimeByWatchList,
-        _key_proc_status: typ.Dict,
+        _key_progress_parser: TitlesProgressStatus,
+        _key_progress_exporter: TitlesProgressStatus,
         _key_selected_parser: IConnectedModule,
         _key_selected_exporter: IConnectedModule,
         _key_running_task: typ.Union[None, CeleryTaskID]
     })
-    
-    @property
-    def cached_parsed_titles(self) -> AnimeByWatchList:
-        '''
-        Returns a cached dump of parsed titles.
-        '''
-        return flask_cache.get(self._key_parsed_titles)
-
-    @cached_parsed_titles.setter
-    def cached_parsed_titles(self, value: AnimeByWatchList) -> typ.NoReturn:
-        '''
-        Stores a dump of parsed titles in the cache.
-        '''
-        _ = flask_cache.set(self._key_parsed_titles, value)
-    
-    @property
-    def cached_exported_titles(self) -> AnimeByWatchList:
-        '''
-        Returns a cached dump of exported titles.
-        '''
-        return flask_cache.get(self._key_exported_titles)
-    
-    @cached_exported_titles.setter
-    def cached_exported_titles(self, value: AnimeByWatchList) -> typ.NoReturn:
-        '''
-        Stores a dump of exported titles in the cache.
-        '''
-        _ = flask_cache.set(self._key_exported_titles, value)
 
     @property
-    def cached_proc_status(self) -> dict:
+    def cached_progress_parser(self) -> TitlesProgressStatus:
         '''
-        Returns the stored status of the task execution process.
+        Returns the stored progress of the parsing task.
         '''
-        return flask_cache.get(self._key_proc_status)
+        return flask_cache.get(self._key_progress_parser)
     
-    @cached_proc_status.setter
-    def cached_proc_status(self, value: dict) -> typ.NoReturn:
+    @cached_progress_parser.setter
+    def cached_progress_parser(self, value: TitlesProgressStatus
+                               ) -> typ.NoReturn:
         '''
-        Stores the progress status of a task.
+        Stores the progress of a parsing task.
         '''
-        _ = flask_cache.set(self._key_proc_status, value)
+        _ = flask_cache.set(self._key_progress_parser, value)
+
+    @property
+    def cached_progress_exporter(self) -> TitlesProgressStatus:
+        '''
+        Returns the stored progress of the exporting task.
+        '''
+        return flask_cache.get(self._key_progress_exporter)
+    
+    @cached_progress_exporter.setter
+    def cached_progress_exporter(self, value: TitlesProgressStatus
+                                 ) -> typ.NoReturn:
+        '''
+        Stores the progress of a exporting task.
+        '''
+        _ = flask_cache.set(self._key_progress_exporter, value)
 
     @property
     def cached_running_task(self) -> CeleryTaskID:
@@ -521,6 +327,205 @@ class CacheService:
             self.cached_parser_module = value
         elif module.value is self._key_selected_exporter:
             self.cached_exporter_module = value
+
+            
+class ActionService:
+    '''
+    Contains methods for working 
+    with data for the flask app.
+    '''
+    def __init__(self):
+        self._logger = OutputLogger(duplicate=True, 
+                                   name="act_serv").logger
+
+    def checking_module(self, module: IConnectedModule, 
+                        action: ServerAction) -> bool:
+        '''
+        Checks whether the module is allowed 
+        and whether the action is enabled.
+        '''
+        if not is_allowed_action(action):
+            self._logger.error(f"{action.name} action disabled.\n")
+            return False
+            
+        if type(module) not in EnabledModules[action.value].value:
+            self._logger.error(f"{action.name} action for module " + 
+                              f"{module.module_name} are disabled.\n")
+            return False
+            
+        return True
+    
+    def prepare_module(self, module: IConnectedModule) -> bool:
+        '''Performs the initial preparing for the module.'''
+        web_serv = WebPageService(module.module_name, module.config_module)
+        if not web_serv.get_preparing(module_name=module.module_name): 
+            return False
+        return True
+
+    def prepare_progress_handler(self, module: IConnectedModule, 
+                                 action: ServerAction) -> IProgressHandler:
+        '''
+        Receives and prepares data to determine progress. 
+        Initializes the progress object.
+        '''
+        progress_handler = DefaultProgressHandler(
+                storage_srv=CacheService(), action=action)
+        page_parser = WebPageParser(module, None, progress_handler)
+                                     
+        titles_count = page_parser.get_all_titles_count()
+        progress_handler.initialize_progress(status=True, n_max=titles_count)
+                                     
+        return progress_handler
+        
+
+    def parse_for_selected_module(self, selected_modules: 
+                                  typ.Dict[ServerAction, IConnectedModule]
+                                 ) -> typ.NoReturn:
+        '''Launches parsing for the selected module.'''
+        action = ServerAction.PARSE
+        module = selected_modules[action]
+                                     
+        self._logger.info("* Start parsing action " +
+                          f"for module {module.module_name}...\n")
+
+        if not self.checking_module(module, action): return
+        if not self.prepare_module(module): return
+            
+        progress_handler = self.prepare_progress_handler(module, action)
+        for type in WatchListType:
+            
+            page_parser = WebPageParser(module, type, progress_handler)
+            page_parser.parse_typed_watchlist()
+            
+        self._logger.info("* ...parsing action " + 
+                          f"for module {module.module_name} finish.\n")
+
+    def get_dump(self, 
+                 selected_modules: typ.Dict[ServerAction, IConnectedModule],
+                 title_exporter: TitleExporter
+                ) -> typ.Union[None, AnimeByWatchList]:
+        '''
+        Prepares the query module and tries to get the dump titles. 
+        If the dump is None, the query module is parse.
+        '''
+        main_module = selected_modules[ServerAction.EXPORT]
+        query_module = selected_modules[ServerAction.PARSE]
+                     
+        if not self.prepare_module(query_module): return None
+            
+        titles_dump = title_exporter.get_titles_dump(query_module)
+        if not titles_dump: 
+            self._logger.warning("Dump not exist. Trying reparse module " + 
+                                f"({main_module.module_name})...")
+            
+            _ = self.parse_for_selected_module(selected_modules)
+            titles_dump = title_exporter.get_titles_dump(query_module)
+            
+            if not titles_dump: 
+                self._logger.critical("Dump not exist.")
+                return None
+                
+        return titles_dump
+    
+    def export_for_selected_module(self, selected_modules: 
+                                   typ.Dict[ServerAction, IConnectedModule]
+                                  ) -> typ.NoReturn:
+        '''Launches export for the selected module.'''
+        action = ServerAction.EXPORT
+        main_module = selected_modules[action]
+        query_module = selected_modules[ServerAction.PARSE]
+                                      
+        self._logger.info("* Start export action " + 
+                          f"for module {main_module.module_name}...\n")
+                                      
+        if not self.checking_module(main_module, action): return
+        if not self.prepare_module(main_module): return
+        
+        progress_handler = self.prepare_progress_handler(query_module, action)
+        te = TitleExporter(main_module, progress_handler)
+                                      
+        titles_dump = self.get_dump(selected_modules, title_exporter=te)
+        if titles_dump: 
+            _ = te.export_titles_dump(titles_dump)
+        
+        self._logger.info("* ...export action " + 
+                          f"for module {main_module.module_name} finish.\n")
+
+    def processing_for_selected_module(self, action: ServerAction, 
+                                       selected_modules: typ.Dict[ServerAction, IConnectedModule]
+                                      ) -> typ.NoReturn:
+        '''Performs the specified action for the selected module.'''
+        act_for_mod  = dict({
+            ServerAction.PARSE: self.parse_for_selected_module,
+            ServerAction.EXPORT: self.export_for_selected_module
+        })
+                            
+        self._logger.info(f"** BEGIN PROCESSING BLOCK ({action.name}) **")
+        _ = act_for_mod[action](selected_modules)
+        self._logger.info(f"** END PROCESSING BLOCK ({action.name}) **\n")
+
+    def get_parse_modules(self) -> typ.List[str]:
+        '''
+        Returns modules avalible for parse action.
+        '''
+        parse_modules = [
+            module.presented_name for module in EnabledParserModules
+        ]
+        return parse_modules
+
+    def get_export_modules(self) -> typ.List[str]:
+        '''
+        Returns modules avalible for export action.
+        '''
+        export_modules = [
+            module.presented_name for module in EnabledExporterModules
+        ]
+        return export_modules
+
+    def get_modules_settings(self) -> typ.Dict[str, dict]:
+        '''
+        Returns the settings for the module form.
+        '''
+        ch_srv = CacheService()
+        
+        parser_progress = ch_srv.cached_progress_parser
+        if not parser_progress:
+            parser_progress = TitlesProgressStatus()
+            ch_srv.cached_progress_parser = parser_progress
+            
+        exporter_progress = ch_srv.cached_progress_exporter
+        if not exporter_progress:
+            exporter_progress = TitlesProgressStatus()
+            ch_srv.cached_progress_exporter = parser_progress
+        
+        settings = dict({
+            'parse_modules': self.get_parse_modules(),
+            'export_modules': self.get_export_modules(),
+            'parser': {
+                'progress': parser_progress.asdict()
+            },
+            'exporter': {
+                'progress': exporter_progress.asdict()
+            }
+        })
+        return settings
+
+    def get_processed_titles(self, module: ActionModule) -> AnimeByWatchList:
+        '''
+        Returns a dump of the titles processed by the action module.
+        '''
+        ch_srv = CacheService()
+
+        titles_data = {}
+        platform = ch_srv.get_cached_platform(module)
+        
+        if platform:
+            dump_file_name = platform.get_json_dump_name()
+            titles_data = DefaultDataHandler(module_name=platform.module_name, 
+                                             dump_file_name=dump_file_name)
+            _ = titles_data.load_data()
+        
+        return titles_data
                                                   
 
 class RequestService:
@@ -752,25 +757,18 @@ class HTMLRenderingService:
         '''
         Returns the html template of status bar with filled data.
         '''
+        ch_srv = CacheService()
+        progress_handler = DefaultProgressHandler(storage_srv=ch_srv, 
+                                                  action=action)
+        progress = progress_handler.progress
+
+        template_file = "_template_progress_bar.html"
         kwargs = {
             'selected_tab': action.value,
             'tab_key': action.value,
             'expanded': progress_xpnd,
-            'progress': {
-                'status': True,
-                'all': {
-                    'now': 0,
-                    'max': 0
-                },
-                'current': {
-                    'watchlist': None,
-                    'now': 0,
-                    'max': 0
-                } 
-            }
+            'progress': progress.asdict()
         }
-
-        template_file = "_template_progress_bar.html"
         return self._get_rendered_template(template_file, kwargs)
 
 #--Finish functional block

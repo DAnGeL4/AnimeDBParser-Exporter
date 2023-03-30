@@ -4,24 +4,25 @@ import os
 import types
 import inspect
 import typing as typ
-import billiard as mp
-from concurrent import futures as fts
+from billiard import Queue, cpu_count
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, HttpUrl
+from logging import Logger
 
 #Custom imports
 from configs.settings import (
     WEB_PAGES_DIR, RELOAD_WEB_PAGES, USE_MULTITHREADS,
-    UPDATE_JSON_DUMPS, DEFAULT_DATA_HANDLER, TITLES_DUMP_KEY_ERRORS,
-    WatchListType, WebPage, RequestMethod,
+    UPDATE_JSON_DUMPS, TITLES_DUMP_KEY_ERRORS,
+    WatchListType, WebPage, RequestMethod
 )
 from lib.interfaces import (
     ISiteSettings, IWebPageParser, 
-    IConnectedModule, IDataHandler
+    IConnectedModule, IDataHandler, IProgressHandler
 )
 from lib.tools import OutputLogger, ListenerLogger
 from lib.requests_connections import RequestsConnections
-from modules.flask.handlers import DataHandlersCompatibility
+from modules.flask.handlers import DefaultDataHandler
 #--Finish imports block
 
 
@@ -30,11 +31,20 @@ class WebPageService:
     '''
     Contains auxiliary tools for working with web pages.
     '''
+    _module_name: str
+    _queue: Queue
+    _logger: Logger
+    config_module: ISiteSettings
+    url_domain: HttpUrl
+    url_wath_lists: AnyHttpUrl
+    dir_name: [str, Path]
+    dir_path: Path
 
     def __init__(self,
                  module_name: str,
                  config_module: ISiteSettings,
-                 queue: mp.Queue = None):
+                 queue: Queue = None):
+                     
         self._module_name = module_name
         self._queue = queue
         self._logger = OutputLogger(duplicate=True,
@@ -194,32 +204,41 @@ class WebPageParser(IWebPageParser):
     Class wrapper for a parser class 
     for a module of a certain site.
     '''
+    _module: IConnectedModule
+    _module_name: str
+    _config_mod: ISiteSettings
+    _parser_mod: IWebPageParser
+    _type: WatchListType
+    _web_serv: WebPageService
+    progress_handler: IProgressHandler
+    data: IDataHandler
 
     def __init__(self,
                  module: IConnectedModule,
                  type: WatchListType,
-                 queue: mp.Queue = None):
+                 progress_handler: IProgressHandler,
+                 queue: Queue = None):
+                     
         self._module = module
+        self._module_name = module.module_name
         self._config_mod = module.config_module
         self._parser_mod = module.parser_module
-
         self._type = type
         self._queue = queue
-        self._mg_url = self._config_mod.url_general
-        self._module_name = module.module_name
-        self._web_serv = WebPageService(self._module_name, self._config_mod,
+        self.progress_handler = progress_handler
+                     
+        module_name = module.module_name
+        url_general = self._config_mod.url_general
+        dump_file_name = self._module.get_json_dump_name()
+        
+        self.data = DefaultDataHandler(module_name=module_name, 
+                                       queue=self._queue,
+                                       dump_file_name=dump_file_name)
+        self._web_serv = WebPageService(module_name, 
+                                        self._config_mod,
                                         self._queue)
 
-        json_file_name = self._config_mod.user_num + "_" +\
-                                            self._module.json_dump_name
-        self._json_dump_name = self._module_name + "/" + json_file_name
-
-        data_handler: IDataHandler = DataHandlersCompatibility[DEFAULT_DATA_HANDLER]
-        self.data = data_handler(module_name=self._module_name, 
-                                 queue=self._queue,
-                                 dump_file_name=self._json_dump_name)
-
-        self._parser_mod.__init__(self, self._mg_url, self._queue)
+        self._parser_mod.__init__(self, url_general, self._queue)
         self._init_methods()
 
     def _init_methods(self) -> typ.NoReturn:
@@ -287,6 +306,7 @@ class WebPageParser(IWebPageParser):
 
         anime_info = self.get_anime_info(web_page)
         self.data[self._type.value].update({anime_key: anime_info.asdict()})
+        self.progress_handler.increase_progress_curr()
 
         self._logger.info("...JSON dump updated.\n")
         return None
@@ -298,7 +318,7 @@ class WebPageParser(IWebPageParser):
         '''Gets anime data in multi-threads.'''
         error_web_pages = dict()
 
-        with fts.ThreadPoolExecutor(max_workers=mp.cpu_count()) as executor:
+        with ThreadPoolExecutor(max_workers=cpu_count()) as executor:
             futures = []
 
             for anime_item in all_anime_urls.items():
@@ -306,7 +326,7 @@ class WebPageParser(IWebPageParser):
                     executor.submit(self.get_anime_info_json,
                                     anime_item=anime_item))
 
-            for future in fts.as_completed(futures):
+            for future in as_completed(futures):
                 item = future.result()
                 if item: 
                     error_web_pages.update(item)
@@ -327,10 +347,33 @@ class WebPageParser(IWebPageParser):
 
         return error_web_pages
 
+    def _edit_old_data(self, 
+                       all_anime_urls: typ.Dict[str, AnyHttpUrl], 
+                       error_web_pages: typ.Dict[str, AnyHttpUrl]
+                      ) -> typ.NoReturn:
+        '''
+        Removes obsolete keys.
+        '''
+        data_keys = self.data[self._type.value].keys()
+        watchlist_keys = all_anime_urls.keys()
+        error_keys = error_web_pages.keys()
+        
+        processed_keys = list(set(watchlist_keys) - set(error_keys))
+        old_keys = list(set(data_keys) - set(processed_keys))
+        
+        _ = list(map(
+            self.data[self._type.value].__delitem__, 
+            filter(self.data[self._type.value].__contains__, old_keys))
+        )
+
     def get_anime_data(self, web_page: WebPage) -> typ.NoReturn:
         '''Gets anime data for all links.'''
         error_web_pages = list()
         all_anime_urls = self.get_typed_anime_list(web_page)
+        titles_count = len(all_anime_urls.keys())
+        
+        self.progress_handler.initialize_progress_curr(watch_list=self._type, 
+                                                       n_max=titles_count)
 
         if USE_MULTITHREADS:
             error_web_pages = self.get_anime_data_in_multithreads(
@@ -338,6 +381,7 @@ class WebPageParser(IWebPageParser):
         else:
             error_web_pages = self.get_anime_data_in_order(all_anime_urls)
 
+        _ = self._edit_old_data(all_anime_urls, error_web_pages)
         _ = self.log_parser_errors(error_web_pages)
 
     def parse_typed_watchlist(self) -> typ.NoReturn:

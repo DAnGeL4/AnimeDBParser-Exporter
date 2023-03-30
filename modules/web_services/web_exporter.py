@@ -3,22 +3,26 @@
 import re
 import urllib.parse
 import typing as typ
-import billiard as mp
+from billiard import Queue, cpu_count
 from pathlib import Path
 from pydantic import AnyHttpUrl
-from concurrent import futures as fts
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from logging import Logger
 
 #Custom imports
 from configs.settings import (
     RequestMethod, WebPage,
     AnimeInfoType, LinkedAnimeInfoType, AnimeByWatchList,
     TitleDump, WatchListType, TitleDumpByKey,
-    USE_MULTITHREADS, DEFAULT_DATA_HANDLER
+    USE_MULTITHREADS
 )
-from lib.interfaces import IConnectedModule, IDataHandler
+from lib.interfaces import (
+    IConnectedModule, IDataHandler, 
+    ISiteSettings, IProgressHandler
+)
 from lib.tools import OutputLogger, ListenerLogger
+from modules.flask.handlers import DefaultDataHandler
 from .web_page_tools import WebPageService, WebPageParser
-from modules.flask.data_handlers import DataHandlersCompatibility
 #--Finish imports block
 
 
@@ -27,19 +31,31 @@ class TitleExporter:
     '''
     Contains tools for the export of titles from the dump.
     '''
+    _module: IConnectedModule
+    _module_name: str
+    _config_mod: ISiteSettings
+    _loader: IDataHandler
+    _type: WatchListType
+    _parser: WebPageParser
+    _queue: Queue
+    _logger: Logger
+    _progress_handler: IProgressHandler
 
-    def __init__(self, module: IConnectedModule):
+    def __init__(self, module: IConnectedModule, 
+                 progress_handler: IProgressHandler, 
+                 queue: Queue = None):
+                     
         self._module = module
         self._module_name = self._module.module_name
         self._config_mod = self._module.config_module
-        self._parser_mod = self._module.parser_module
-        self._error_titles_file = "error_titles.json"
-        self._loader: IDataHandler = DataHandlersCompatibility[DEFAULT_DATA_HANDLER]
+        self._loader = DefaultDataHandler
+        self._progress_handler = progress_handler
                          
         self._type = None
-        self._parser = WebPageParser(self._module, self._type)
+        self._parser = WebPageParser(self._module, self._type, 
+                                     self._progress_handler)
                          
-        self._queue = None
+        self._queue = queue
         self._logger = OutputLogger(duplicate=True, queue=self._queue, 
                                     name="title_exp").logger
     
@@ -156,14 +172,10 @@ class TitleExporter:
         '''
         Receives a dump base for an anime for a user.
         '''
-        mod_name = query_module.module_name
-        user_num = query_module.config_module.user_num
-        file_name = query_module.json_dump_name
-
         self._logger.info("Getting json dump for the " + 
-                          f"requested module ({mod_name})...")
+                          f"requested module ({query_module.module_name})...")
             
-        json_dump_name = self.get_json_dump_name(mod_name, user_num, file_name)
+        json_dump_name = query_module.get_json_dump_name()
 
         data = self._loader(module_name=self._module_name, 
                             queue=self._queue,
@@ -178,13 +190,9 @@ class TitleExporter:
         '''
         Saves a error titles of an anime for a user to file.
         '''
-        mod_name = self._module_name
-        user_num = self._config_mod.user_num
-        file_name = self._error_titles_file
-
         self._logger.info("Saving error titles of an anime for a user...")
             
-        json_dump_name = self.get_json_dump_name(mod_name, user_num, file_name)
+        json_dump_name = self._module.get_json_dump_name()
                             
         data = self._loader(module_name=self._module_name, 
                             queue=self._queue,
@@ -241,9 +249,10 @@ class TitleExporter:
         Exports for a watchlist dump in multi-threads.
         '''
         error_titles = list()
-        self._parser = WebPageParser(self._module, self._type, self._queue)        
+        self._parser = WebPageParser(self._module, self._type, self._queue, 
+                                     self._progress_handler)        
                                           
-        with fts.ThreadPoolExecutor(max_workers=mp.cpu_count()) as executor:
+        with ThreadPoolExecutor(max_workers=cpu_count()) as executor:
             futures = []
             
             for title_item in watchlist_dump.items():
@@ -252,7 +261,7 @@ class TitleExporter:
                                     title_item=title_item)
                 )
                 
-            for future in fts.as_completed(futures):
+            for future in as_completed(futures):
                 error_title = future.result()
                 if error_title:
                     error_titles.append(error_title)
@@ -265,7 +274,8 @@ class TitleExporter:
         Exports for a watchlist dump in one stream.
         '''
         error_titles = list()
-        self._parser = WebPageParser(self._module, self._type)
+        self._parser = WebPageParser(self._module, self._type, 
+                                     self._progress_handler)
         
         for title_item in watchlist_dump.items():
             error_title = self.export_selected_title(title_item)
