@@ -1,7 +1,8 @@
 #--Start imports block
 #System imports
+import re
 import typing as typ
-import multiprocessing as mp
+from billiard import Queue
 from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 
@@ -19,9 +20,14 @@ class WebPageParser(IWebPageParser):
     the anime information from Animebuff.ru site 
     and its transformation to a unified state.
     '''
+    _type_tag: str
+    _genres_tag: str
+    _episodes_tag: str
+    _status_year_tag: str
+    _other_names_tag: str
     
     def __init__(self, module_url_general: AnyHttpUrl, 
-                 queue: mp.Queue=None) -> typ.NoReturn:
+                 queue: Queue=None) -> typ.NoReturn:
         self._queue = queue
         self._logger = OutputLogger(duplicate=True, 
                                     queue=self._queue, 
@@ -34,6 +40,26 @@ class WebPageParser(IWebPageParser):
         self._episodes_tag = "Эпизоды"
         self._status_year_tag = "Статус"
         self._other_names_tag = "Другие названия"
+
+    def parse_all_titles_count(self, web_page: WebPage) -> int:
+        '''
+        Getts a number with the total count of titles.
+        '''
+        self._logger.info("Parsing titles total count...")
+        
+        soup = BeautifulSoup(web_page, 'lxml')
+        try:
+            total_list_item = soup.find(class_="watchlist__sort-active")
+            total_text_item = total_list_item.find('span')
+            total_text = total_text_item.text.strip()
+            finded_counts = re.findall(r'\d+', total_text)
+            titles_count = int(finded_counts[0])
+            
+        except:
+            titles_count = 0
+        
+        self._logger.success("...parsed.\n")
+        return titles_count
 
     def get_typed_anime_list(self, web_page: WebPage) -> typ.Dict[str, AnyHttpUrl]:
         '''
