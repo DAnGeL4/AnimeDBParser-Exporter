@@ -386,9 +386,14 @@ class WebPageParser(IWebPageParser):
 
     def parse_typed_watchlist(self) -> typ.NoReturn:
         '''Parses the data of all anime titles in a typed watchlist.'''
+        self._logger.info('Getting the typed list webpage...')
         web_page = self._web_serv.get_web_page_file(type=self._type, 
-                                                    reload_page=True)
-        if web_page is None: return
+                                                    reload_page=True, 
+                                                    save_page=False)
+        if web_page is None: 
+            self._logger.error('...webpage not received.')
+            return
+        self._logger.success('...webpage received.')
 
         _ = self.data.load_data()
         _ = self.data.prepare_data(self._type)
@@ -396,6 +401,25 @@ class WebPageParser(IWebPageParser):
         _ = self.get_anime_data(web_page)
 
         _ = self.data.save_data()
+
+    def get_all_titles_count(self) -> int:
+        '''
+        Requests a web page and parses it, 
+        getting a number with the total count of titles.
+        '''
+        self._logger.info('Getting a web page with a total list of titles...')
+        url = self._config_mod.url_wath_lists
+        web_page = self._web_serv.get_web_page_file(type=None, 
+                                                    url=url,
+                                                    reload_page=True, 
+                                                    save_page=False)
+        if web_page is None: 
+            self._logger.error('...webpage not received.')
+            return 0
+        self._logger.success('...webpage received.')
+            
+        titles_count = self.parse_all_titles_count(web_page)
+        return titles_count
 
 
 #--Finish functional block
