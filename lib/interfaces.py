@@ -55,33 +55,76 @@ class ISiteSettings:
         } 
         self.cookies = cookies
 
-    def _get_coockie_by_key(self, key: str, cookies: typ.Union[str, Cookies, JSON]
-                           ) -> typ.Union[Cookies, None]:
-        '''
-        Returns cookie from a string or json.
-        '''        
-        if not cookies: return None
-        cookies = json.dumps(cookies)
-        
+    def _prepare_cookies(self, cookies: typ.Union[str, Cookies, JSON]
+                        ) -> typ.Union[Cookies, None]:
+        '''Tries to convert cookies.'''
+        if not cookies: 
+            return None
+        if type(cookies) is str:
+            try: 
+                cookies = json.loads(cookies)
+            except:
+                pass
+        return cookies
+
+    def _get_cookie_from_str(self, key: str, 
+                             cookies: typ.Union[str, Cookies, JSON]
+                            ) -> typ.Union[Cookies, None]:
+        '''Tries to find cookie value in string.'''
+        # if all string is cookie value
         start_i = cookies.find(key)
-        if start_i == -1: return cookies[1:-1]
+        if start_i == -1: return cookies
             
         end_i = start_i + len(key)
-        if cookies[end_i] == '=':
+        if cookies[end_i] == ':' or cookies[end_i] == '=':
             start_i = end_i + 1
-            cookies = cookies[start_i:]
-            cookies = re.search("\w+", cookies)
-            return cookies.group()
             
-        else:
-            cookies = json.loads(cookies)
-            for item in cookies:
-                if 'name' not in item: return None
-                    
-                if item['name'] == key:
-                    return item['value']
-                    
+            if cookies[start_i] == '"' or \
+                    cookies[start_i] == "'" or \
+                    cookies[start_i] == ' ':
+                start_i += 1
+
+            #gets cookie value after key definition
+            cookies = cookies[start_i:]
+            cookies = re.split("[\s}{:\'\"]", cookies)
+            return cookies[0]
+
+    def _get_cookie_from_dict(self, key: str, 
+                             cookies: typ.Union[str, Cookies, JSON]
+                            ) -> typ.Union[Cookies, None]:
+        '''Tries to get cookie value from dictionary.'''
+        if 'name' not in cookies: 
+            return None
+        if cookies['name'] == key:
+            return cookies['value']
         return None
+
+    def _get_cookie_from_list(self, key: str, 
+                             cookies: typ.Union[str, Cookies, JSON]
+                            ) -> typ.Union[Cookies, None]:
+        '''Tries to get cookie value from list.'''
+        cookie = None
+                                
+        for item in cookies:
+            cookie = self._get_cookie_from_dict(key, item)
+            if cookie: 
+                break
+        return cookie
+
+    def _get_coockie_by_key(self, key: str, cookies: typ.Union[str, Cookies, JSON]
+                           ) -> typ.Union[Cookies, None]:
+        '''Returns cookie from a string or json.'''        
+        cookie = None
+                               
+        cookies = self._prepare_cookies(cookies)
+        if type(cookies) is str:
+            cookie = self._get_cookie_from_str(key, cookies)
+        elif type(cookies) is list:
+            cookie = self._get_cookie_from_list(key, cookies)
+        elif type(cookies) is dict:
+            cookie = self._get_cookie_from_dict(key, cookies)
+                    
+        return cookie
 
     def _is_authorized_user(self):
         '''Checks if a cookie exists and if a username has been received.'''
@@ -168,6 +211,9 @@ class IWebPageParser:
 
     def parse_action_link(self, web_page: WebPage, action: WatchListType) -> AnyHttpUrl:
         '''Parses the action link from the web page.'''
+
+    def parse_all_titles_count(self, web_page: WebPage) -> int:
+        '''Getts a number with the total count of titles.'''
 
 
 class IConnectedModule:
