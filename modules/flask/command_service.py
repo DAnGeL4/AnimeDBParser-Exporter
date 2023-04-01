@@ -1,19 +1,24 @@
 #--Start imports block
 #System imports
 import typing as typ
-from flask import session
+from celery.result import AsyncResult
 
 #Custom imports
 from configs.settings import (
     ServerAction, AjaxServerResponse, ActionModule,
     AjaxCommand, ResponseStatus, JSON
 )
-from modules.flask.service import (
-    DataService, HTMLRenderingService,
-    CacheService, RequestService,
-    SessionService
+from modules.common.application_objects import celery
+from modules.flask import celery_tasks as cl_tasks
+from .services import (
+    HTMLRenderingService, CacheService, 
+    RequestService, SessionService
 )
 #--Finish imports block
+
+
+#--Start global constants block
+#--Finish global constants block
 
 
 #--Start functional block
@@ -23,13 +28,13 @@ class CommandService:
     passed from JQuery Ajax.
     '''
 
-    _response: AjaxServerResponse = None
-    _action: ServerAction = None
-    _module: ActionModule = None
-    _progress_xpnd: bool = None
-    _selected_tab: str = None
-    _optional_args: JSON = None
-    _renderer: HTMLRenderingService = None
+    _response: AjaxServerResponse
+    _action: ServerAction
+    _module: ActionModule
+    _progress_xpnd: bool
+    _selected_tab: str
+    _optional_args: JSON
+    _renderer: HTMLRenderingService
 
     def init_args(self, action: ServerAction, module: ActionModule,
                   optional_args: dict) -> typ.NoReturn:
@@ -61,6 +66,16 @@ class CommandService:
         self._response.msg = self._renderer.get_rendered_alert(
             ResponseStatus.FAIL, 'Something went wrong.')
 
+    def _fail_task(self) -> typ.NoReturn:
+        '''
+        Fills the object of response in accordance 
+        with the status of a common failure.
+        Prepares a template for a fail alert.
+        '''
+        self._response.status = ResponseStatus.FAIL
+        self._response.msg = self._renderer.get_rendered_alert(
+            ResponseStatus.FAIL, 'Action failed.')
+
     def _fail_unknown_cmd(self) -> typ.NoReturn:
         '''
         Fills the object of response in accordance with 
@@ -70,6 +85,18 @@ class CommandService:
         self._response.status = ResponseStatus.FAIL
         self._response.msg = self._renderer.get_rendered_alert(
             ResponseStatus.FAIL, 'Unknown command.')
+
+    def _warn_not_runing(self) -> typ.NoReturn:
+        '''
+        Fills the object of response in accordance with 
+        the status - fail; and the reason - action not running.
+        Prepares a template for: status alert; status bar; titles list.
+        '''
+        self._response.status = ResponseStatus.FAIL
+        self._response.statusbar_tmpl = self._renderer.get_rendered_status_bar(
+            self._action, self._progress_xpnd)
+        self._response.msg = self._renderer.get_rendered_alert(
+            ResponseStatus.WARNING, 'The action is not in progress.')
 
     def _info_stopped(self) -> typ.NoReturn:
         '''
@@ -95,6 +122,30 @@ class CommandService:
         self._response.title_tmpl = self._renderer.get_rendered_titles_list(
             self._module, self._selected_tab)
 
+    def _done_started(self) -> typ.NoReturn:
+        '''
+        Fills the object of response in accordance with 
+        the status - done; and the reason - started.
+        Prepares a template for: status alert; status bar; titles list.
+        '''
+        self._response.status = ResponseStatus.DONE
+        self._response.statusbar_tmpl = self._renderer.get_rendered_status_bar(
+            self._action, self._progress_xpnd)
+        self._response.msg = self._renderer.get_rendered_alert(
+            ResponseStatus.INFO, 'Action started.')
+
+    def _done_stopped(self) -> typ.NoReturn:
+        '''
+        Fills the object of response in accordance with 
+        the status - done; and the reason - stopped.
+        Prepares a template for: status alert; status bar; titles list.
+        '''
+        self._response.status = ResponseStatus.DONE
+        self._response.statusbar_tmpl = self._renderer.get_rendered_status_bar(
+            self._action, self._progress_xpnd)
+        self._response.msg = self._renderer.get_rendered_alert(
+            ResponseStatus.DONE, 'Action stopped.')
+
     def _done_finished(self) -> typ.NoReturn:
         '''
         Fills the object of response in accordance with 
@@ -114,42 +165,45 @@ class CommandService:
         Starts selected action.
         Returns the filled object of response 
         in accordance with the status.
-        Prepares a templates for: sttatus alert; status bar.
+        Prepares a templates for: status alert; status bar.
         '''
-        self._response.status = ResponseStatus.DONE
-        self._response.msg = self._renderer.get_rendered_alert(
-            ResponseStatus.INFO, 'Action started.')
-        self._response.statusbar_tmpl = self._renderer.get_rendered_status_bar(
-            self._action, self._progress_xpnd)
-
         ch_srv = CacheService()
         req_srv = RequestService()
-        dt_srv = DataService()
-        selected_modules = dict()
         
+        selected_modules = dict()
         for action in ServerAction:
             module = req_srv.get_module_by_action(action)
             selected_modules.update({
                 action: ch_srv.get_cached_platform(module)
             })
-            
-        _ = dt_srv.processing_for_selected_module(self._action, selected_modules)
+        
+        task = cl_tasks.task_action_processing.delay(
+            self._action, selected_modules)
+        ch_srv.cached_running_task = task.id
+        
+        if task.status == 'PENDING':
+            _ = self._done_started()
+        else:
+            _ = self._fail_common()
 
     def _stop_action(self) -> typ.NoReturn:
         '''
-        Stops selected action.
-        Returns the filled object of response 
-        in accordance with the status.
-        Prepares a templates for: sttatus alert; status bar.
+        Stops selected celery task by action.
+        Returns the filled object of response.
         '''
+        ch_srv = CacheService()
         ss_srv = SessionService(module=self._module)
+        
         ss_srv.session_stopped_flag = True
+        task_id = ch_srv.cached_running_task
+        
+        if task_id is not None:
+            task = AsyncResult(id=task_id, app=celery)
+            _ = task.revoke(terminate=True, signal='SIGKILL')
+            _ = self._done_stopped()
 
-        self._response.status = ResponseStatus.DONE
-        self._response.msg = self._renderer.get_rendered_alert(
-            ResponseStatus.INFO, 'Action stopped.')
-        self._response.statusbar_tmpl = self._renderer.get_rendered_status_bar(
-            self._action, self._progress_xpnd)
+        else:
+            _ = self._warn_not_runing()
 
     def _ask_action(self) -> typ.NoReturn:
         '''
@@ -158,17 +212,32 @@ class CommandService:
         '''
         ss_srv = SessionService(module=self._module)
         is_stoped = ss_srv.session_stopped_flag
-
+        
         if is_stoped:
-            if is_stoped:
-                _ = self._info_stopped()
-            else:
-                _ = self._done_finished()
-
+            _ = self._info_stopped()
             ss_srv.session_stopped_flag = False
 
         else:
-            self._info_processed()
+            ch_srv = CacheService()
+            task_id = ch_srv.cached_running_task
+            
+            status = None
+            if task_id is not None:
+                task = AsyncResult(id=task_id, app=celery)
+                status = task.status if task else None
+
+            if status is None:
+                _ = self._fail_common()
+            elif status == 'REVOKED':
+                _ = self._info_stopped()
+            elif status == 'PENDING':
+                _ = self._info_processed()
+            elif status == 'SUCCESS':
+                _ = self._done_finished()
+            elif status == 'FAILURE':
+                _ = self._fail_task()
+            else:
+                _ = self._fail_common()
 
     def run_command(self, cmd: AjaxCommand) -> typ.NoReturn:
         '''
