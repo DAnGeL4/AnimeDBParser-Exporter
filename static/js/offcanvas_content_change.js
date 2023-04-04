@@ -49,9 +49,7 @@ function fill_offcanvas(clicked_item, title_data){
     name.text(title_data['name'])
     original_name.text(title_data['original_name'])
     other_names.text(title_data['other_names'])
-  
-    genres.text('undefined')
-  
+    genres.text(title_data['genres'])
     type.text(title_data['type'])
     year.text(title_data['year'])
     episodes.text(title_data['ep_count'])
