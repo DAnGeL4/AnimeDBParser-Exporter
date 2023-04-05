@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 
 #Custom imports
-from configs.settings import AnimeInfoType, WebPage, AnimeType, AnimeStatuse
+from lib.types import AnimeInfoType, WebPage, AnimeType, AnimeStatus
 from lib.interfaces import IWebPageParser
 from lib.tools import OutputLogger
 #--Finish imports block
@@ -193,7 +193,7 @@ class WebPageParser(IWebPageParser):
 
         return anime_ep_count
 
-    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatuse:
+    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatus:
         '''
         Parses anime status from the item.
         '''

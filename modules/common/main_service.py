@@ -6,13 +6,14 @@ from pathlib import Path
 
 #Custom imports
 from configs.settings import (
-    ServerAction, COMMON_BASH_LOG_FILE, 
-    REDIS_SETUP_SH_FILE, CELERY_SETUP_SH_FILE,
-    CELERY_TASKS_MODULE, RESTART_CELERY_WORKERS
+    COMMON_BASH_LOG_FILE, REDIS_SETUP_SH_FILE, 
+    CELERY_SETUP_SH_FILE, CELERY_TASKS_MODULE, 
+    RESTART_CELERY_WORKERS
 )
-from configs.connected_modules import EnabledModules
+from lib.types import ServerAction
 from lib.proxy_checker import ProxyChecker
 from lib.tools import OutputLogger, is_allowed_action
+from .connected_modules import EnabledModules
 #--Finish imports block
 
 

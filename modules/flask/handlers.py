@@ -7,10 +7,11 @@ import multiprocessing as mp
 from pathlib import Path
 
 #Custom imports
-from configs.settings import (
-    JSON_DUMPS_DIR, WatchListType, ServerAction,
-    EnabledDataHandler, TitlesProgressStatus, 
-    TitlesProgressStatusCurrent, EnabledProgressHandler,
+from configs.settings import JSON_DUMPS_DIR
+from lib.types import (
+    WatchListType, ServerAction, EnabledDataHandler,
+    TitlesProgressStatus, TitlesProgressStatusCurrent,
+    EnabledProgressHandler, 
     DEFAULT_PROGRESS_HANDLER, DEFAULT_DATA_HANDLER
 )
 from lib.interfaces import IDataHandler, IProgressHandler
@@ -275,19 +276,6 @@ class CacheProgressHandler(IProgressHandler):
                 progress.all.now += 1
                 
             self.progress = progress
-
-    def switch_status(self, status: bool = None) -> typ.NoReturn:
-        '''
-        Toggles the status to the opposite if not specified.
-        '''
-        progress = self.progress
-        
-        if status is None:
-            progress.status = bool(not progress.status)
-        else:
-            progress.status = status
-            
-        self.progress = progress
 
 
 DataHandlersCompatibility: typ.Dict[EnabledDataHandler, IDataHandler] = {

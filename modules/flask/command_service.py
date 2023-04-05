@@ -4,7 +4,7 @@ import typing as typ
 from celery.result import AsyncResult
 
 #Custom imports
-from configs.settings import (
+from lib.types import (
     ServerAction, AjaxServerResponse, ActionModule,
     AjaxCommand, ResponseStatus, JSON
 )

@@ -32,13 +32,11 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
 #--Finish decorators block
 
 
-#--Start main block    
-    
+#--Start main block
 @basic_output
 def main() -> typ.NoReturn:
     '''Entry point.'''
     m_serv = MainService()
-    
     if not m_serv.prepare_redis_server(): 
         m_serv.logger.error('The Redis server is not running.')
         return
@@ -48,7 +46,6 @@ def main() -> typ.NoReturn:
         return
     
     _ = m_serv.prepare_modules_proxies()
-
     _ = _flask.run_app()
     
     return

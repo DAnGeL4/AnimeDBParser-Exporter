@@ -10,11 +10,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import Logger
 
 #Custom imports
-from configs.settings import (
+from configs.settings import USE_MULTITHREADS
+from lib.types import (
     RequestMethod, WebPage,
     AnimeInfoType, LinkedAnimeInfoType, AnimeByWatchList,
-    TitleDump, WatchListType, TitleDumpByKey,
-    USE_MULTITHREADS
+    TitleDump, WatchListType, TitleDumpByKey
 )
 from lib.interfaces import (
     IConnectedModule, IDataHandler, 

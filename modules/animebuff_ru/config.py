@@ -6,9 +6,9 @@ from bs4 import BeautifulSoup
 from requests.structures import CaseInsensitiveDict
 
 #Custom imports
-from configs.settings import (
-    REQUEST_PROXIES_FORMAT, WatchListType, 
-    Cookies, JSON, RequestMethod, WebPage
+from configs.settings import REQUEST_PROXIES_FORMAT
+from lib.types import (
+    WatchListType, Cookies, JSON, RequestMethod, WebPage
 )
 from lib.interfaces import ISiteSettings
 from lib.requests_connections import RequestsConnections
@@ -39,7 +39,7 @@ class AnimeBuffRuConfig(ISiteSettings):
         WatchListType.ABANDONE: 
             "%D0%97%D0%B0%D0%B1%D1%80%D0%BE%D1%88%D0%B5%D0%BD%D0%BE",
         WatchListType.FAVORITES: 
-            "%D0%98%D0%B7%D0%B1%D1%80%D0%B0%D0%BD%D0%BD%D0%BE%D0%B5"
+            "%D0%98%D0%B7%D0%B1%D1%80%D0%B0%D0%BD%D0%BD%D0%BE%D0%B5",
     }
 
     _cookies_key = "animebuff_session"

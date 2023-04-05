@@ -13,7 +13,9 @@ from logging import Logger
 #Custom imports
 from configs.settings import (
     WEB_PAGES_DIR, RELOAD_WEB_PAGES, USE_MULTITHREADS,
-    UPDATE_JSON_DUMPS, TITLES_DUMP_KEY_ERRORS,
+    UPDATE_JSON_DUMPS, TITLES_DUMP_KEY_ERRORS
+)
+from lib.types import (
     WatchListType, WebPage, RequestMethod
 )
 from lib.interfaces import (

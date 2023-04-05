@@ -8,7 +8,7 @@ from multiprocessing import Queue
 from requests.cookies import RequestsCookieJar
 
 #Custom imports
-from configs.settings import WebPage, Session, WatchListType, RequestMethod
+from .types import WebPage, Session, WatchListType, RequestMethod
 from .interfaces import ISiteSettings
 from .proxy_checker import ProxyChecker
 from .tools import OutputLogger

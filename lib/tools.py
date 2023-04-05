@@ -5,7 +5,7 @@ import logging
 import traceback
 import functools
 import typing as typ
-import multiprocessing as mp
+import billiard as mp
 from types import TracebackType
 from contextlib import redirect_stdout
 from logging.handlers import QueueHandler
@@ -13,9 +13,9 @@ from logging.handlers import QueueHandler
 #Custom imports
 from configs.settings import (
     WRITE_LOG_TO_FILE, GLOBAL_LOG_FILE,
-    ENABLE_PARSING_MODULES, ENABLE_EXPORTER_MODULES,
-    ServerAction
+    ENABLE_PARSING_MODULES, ENABLE_EXPORTER_MODULES
 )
+from .types import ServerAction
 #--Finish imports block
 
 

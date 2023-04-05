@@ -1,33 +1,18 @@
 #--Start imports block
 #System imports
 import typing as typ
-import multiprocessing as mp
+from billiard import Queue
 from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
+
 #Custom imports
-from configs.settings import AnimeTypes, WatchListTypes, LinkedAnimeInfoType, WebPage
+from lib.types import AnimeType, WatchListType, LinkedAnimeInfoType, WebPage
 from lib.interfaces import IWebPageParser
 from lib.tools import OutputLogger
 #--Finish imports block
 
 
 #--Start global constants block
-types_compatibility = {
-    'tv': AnimeTypes.TV.value,
-    'movie': AnimeTypes.MOVIE.value,
-    'ova': AnimeTypes.OVA.value,
-    'special': AnimeTypes.SPECIAL.value,
-    'ona': AnimeTypes.ONA.value,
-}
-actions_compatibility = {
-    WatchListTypes.WATCH: 'Смотрю',
-    WatchListTypes.DESIRED: 'Запланировано',
-    WatchListTypes.VIEWED: 'Просмотрено',
-    WatchListTypes.ABANDONE: 'Брошено',
-    WatchListTypes.FAVORITES: None,
-    WatchListTypes.DELAYED: 'Отложено',
-    WatchListTypes.REVIEWED: 'Пересматриваю'
-}
 #--Finish global constants block
 
 
@@ -38,9 +23,25 @@ class WebPageParser(IWebPageParser):
     the anime information from AnimeGo.org site 
     and its transformation to a unified state.
     '''
+    _types_compatibility = {
+        'tv': AnimeType.TV.value,
+        'movie': AnimeType.MOVIE.value,
+        'ova': AnimeType.OVA.value,
+        'special': AnimeType.SPECIAL.value,
+        'ona': AnimeType.ONA.value,
+    }
+    _actions_compatibility = {
+        WatchListType.WATCH: 'Смотрю',
+        WatchListType.DESIRED: 'Запланировано',
+        WatchListType.VIEWED: 'Просмотрено',
+        WatchListType.ABANDONE: 'Брошено',
+        WatchListType.FAVORITES: None,
+        WatchListType.DELAYED: 'Отложено',
+        WatchListType.REVIEWED: 'Пересматриваю'
+    }
     
     def __init__(self, module_url_general: AnyHttpUrl,
-                 queue: mp.Queue=None) -> typ.NoReturn:
+                 queue: Queue=None) -> typ.NoReturn:
         self._queue = queue
         self._logger = OutputLogger(duplicate=True, 
                                     queue=self._queue, 
@@ -73,14 +74,14 @@ class WebPageParser(IWebPageParser):
         title_link = item_anime_link.get('href')
         return title_link
         
-    def parse_type_from_card(self, item: BeautifulSoup) -> AnimeTypes:
+    def parse_type_from_card(self, item: BeautifulSoup) -> AnimeType:
         '''
         Parses anime type from the card item.
         '''
         item_type_year = item.find(class_='animes-grid-item-body-info')
         item_type = item_type_year.find(class_='text-link-gray').get('href')
         title_type = item_type.split('/')[-1]
-        return types_compatibility[title_type]
+        return self._types_compatibility[title_type]
         
     def parse_year_from_card(self, item: BeautifulSoup) -> int:
         '''
@@ -130,13 +131,13 @@ class WebPageParser(IWebPageParser):
         return items_anime_cards
 
     def parse_action_link(self, web_page: WebPage, 
-                          action: WatchListTypes) -> AnyHttpUrl:
+                          action: WatchListType) -> AnyHttpUrl:
         '''
         Prepares the necessary link to the action 
         on the anime web page.
         '''
         self._logger.info("Looking for the action link...")
-        action = actions_compatibility[action]
+        action = self._actions_compatibility[action]
         if not action: 
             self._logger.error("Unknown action type.")
             return

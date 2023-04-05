@@ -6,10 +6,8 @@ from bs4 import BeautifulSoup
 from requests.structures import CaseInsensitiveDict
 
 #Custom imports
-from configs.settings import (
-    REQUEST_PROXIES_FORMAT, 
-    Cookies, JSON, WebPage
-)
+from configs.settings import REQUEST_PROXIES_FORMAT
+from lib.types import Cookies, JSON, WebPage, WatchListType
 from lib.interfaces import ISiteSettings
 #--Finish imports block
 
@@ -26,6 +24,16 @@ class AnimeGoOrgConfig(ISiteSettings):
     url_search = f"{url_general}/search/anime?q="
     url_profile = Template(f"{url_general}/user/$username")
     url_wath_lists = Template(f"{url_general}/user/$username/mylist/anime")
+    url_type_option = "/"
+
+    url_types = {
+        WatchListType.WATCH: "watching",
+        WatchListType.DESIRED: "planned",
+        WatchListType.VIEWED: "completed",
+        WatchListType.ABANDONE: "dropped",
+        WatchListType.DELAYED: "onhold",
+        WatchListType.REVIEWED: "rewatching"
+    }
 
     _cookies_key = "REMEMBERME"
     

@@ -12,9 +12,8 @@ from requests.structures import CaseInsensitiveDict
 from logging import Logger
 
 #Custom imports
-from configs.settings import (
-    WebPage, AnimeInfoType, LinkedAnimeInfoType, 
-    WatchListType, AnimeType, AnimeStatuse, 
+from .types import (
+    WebPage, LinkedAnimeInfoType, WatchListType, 
     JSON, Cookies, ServerAction, TitlesProgressStatus
 )
 #--Finish imports block
@@ -153,52 +152,16 @@ class IWebPageParser:
     def __init__(self, parser_module: 'IWebPageParser') -> typ.NoReturn:
         self._url_general: AnyHttpUrl
 
+    def parse_all_titles_count(self, web_page: WebPage) -> int:
+        '''Getts a number with the total count of titles.'''
+        pass
+
     def get_typed_anime_list(self, web_page: WebPage) -> typ.Dict[str, AnyHttpUrl]:
         '''Gets an anime list by the type of watchlist. '''
         pass
 
-    def get_anime_info(self, web_page: WebPage) -> AnimeInfoType:
+    def get_anime_info(self, web_page: WebPage) -> LinkedAnimeInfoType:
         '''Returns the anime data by the keys. '''
-        pass
-
-    def _get_item_by_tag(self, tag: str, item_list_info: BeautifulSoup):
-        '''Searches for an element by tag.'''
-        pass
-
-    def _get_anime_poster(self, item: BeautifulSoup) -> AnyHttpUrl:
-        '''Parses anime poster from the item.'''
-        pass
-
-    def _get_anime_name(self, item: BeautifulSoup) -> str:
-        '''Parses anime name from the item.'''
-        pass
-
-    def _get_anime_original_name(self, item: BeautifulSoup) -> str:
-        '''Parses anime original name from the item.'''
-        pass
-
-    def _get_anime_type(self, item: BeautifulSoup) -> AnimeType:
-        '''Parses anime type from the item.'''
-        pass
-
-    def _get_anime_genres(self, item: BeautifulSoup) -> typ.List[str]:
-        '''Parses anime genres from the item.'''
-        pass
-
-    def _get_anime_ep_count(self, item: BeautifulSoup) -> typ.Union[int, None]:
-        '''Parses anime episodes count from the item.'''
-        pass
-
-    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatuse:
-        '''Parses anime status from the item.'''
-        pass
-
-    def _get_anime_year(self, item: BeautifulSoup) -> int:
-        '''Parses anime year from the item.'''
-        pass
-
-    def _get_other_names(self, item: BeautifulSoup) -> typ.List[str]:
-        '''Parses anime other names from the item.'''
         pass
     
     def parse_query_anime_list(self, web_page: WebPage) -> typ.List[BeautifulSoup]:
@@ -211,9 +174,6 @@ class IWebPageParser:
 
     def parse_action_link(self, web_page: WebPage, action: WatchListType) -> AnyHttpUrl:
         '''Parses the action link from the web page.'''
-
-    def parse_all_titles_count(self, web_page: WebPage) -> int:
-        '''Getts a number with the total count of titles.'''
 
 
 class IConnectedModule:

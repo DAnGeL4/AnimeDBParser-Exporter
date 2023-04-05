@@ -8,10 +8,10 @@ from flask import request, render_template, session
 from flask_caching import Cache
 
 #Custom imports
-from configs.settings import (
+from configs.settings import TEMPLATES_DIR
+from lib.types import (
     ServerAction, AjaxServerResponse, ActionModule,
     ActionToModuleCompatibility, AjaxCommand, ResponseStatus,
-    TEMPLATES_DIR,
     WatchListType, AnimeByWatchList, Session, Cookies, 
     JSON, WebPagePart, WebPage, CeleryTaskID,
     TitlesProgressStatus
@@ -376,7 +376,6 @@ class ActionService:
         progress_handler.initialize_progress(status=True, n_max=titles_count)
                                      
         return progress_handler
-        
 
     def parse_for_selected_module(self, selected_modules: 
                                   typ.Dict[ServerAction, IConnectedModule]
