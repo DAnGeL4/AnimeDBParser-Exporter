@@ -44,18 +44,21 @@ class TitleExporter:
     def __init__(self, module: IConnectedModule, 
                  progress_handler: IProgressHandler, 
                  queue: Queue = None):
-                     
         self._module = module
         self._module_name = self._module.module_name
         self._config_mod = self._module.config_module
         self._loader = DefaultDataHandler
         self._progress_handler = progress_handler
-                         
         self._type = None
+        self._queue = queue
+                     
+        dump_file_name = self._module.get_json_dump_name()
+                     
         self._parser = WebPageParser(self._module, self._type, 
                                      self._progress_handler)
-                         
-        self._queue = queue
+        self._data = self._loader(module_name=self._module_name, 
+                                  queue=self._queue,
+                                  dump_file_name=dump_file_name)
         self._logger = OutputLogger(duplicate=True, queue=self._queue, 
                                     name="title_exp").logger
     
@@ -238,13 +241,18 @@ class TitleExporter:
             
         res = self.submit_action(web_page)
         if not res: return title_key
+
+        #getted title web page
+        title_data = None #data after parsing webpage
+        self._data[self._type.value].update({title_key: title_data.asdict()})
+        self.progress_handler.increase_progress_curr()
             
         self._logger.info(f"...title exports are completed ({title_key}).\n")
         return None
 
     @ListenerLogger.listener_preparing
-    def export_watchlist_in_multithreads(self, watchlist_dump: 
-                                         TitleDumpByKey) -> typ.List[str]:
+    def export_watchlist_in_multithreads(self, watchlist_dump: TitleDumpByKey
+                                        ) -> typ.List[typ.Union[str, None]]:
         '''
         Exports for a watchlist dump in multi-threads.
         '''
@@ -268,8 +276,8 @@ class TitleExporter:
                 
         return error_titles
 
-    def export_watchlist_in_order(self, watchlist_dump: 
-                                  TitleDumpByKey) -> typ.List[str]:
+    def export_watchlist_in_order(self, watchlist_dump: TitleDumpByKey
+                                 ) -> typ.List[typ.Union[str, None]]:
         '''
         Exports for a watchlist dump in one stream.
         '''
@@ -283,27 +291,65 @@ class TitleExporter:
                 error_titles.append(error_title)
                 
         return error_titles
+
+    def _edit_old_data(self, 
+                       titles_data: typ.Dict[str, AnyHttpUrl], 
+                       error_titles: typ.List[str]
+                      ) -> typ.NoReturn:
+        '''
+        Removes obsolete keys.
+        '''
+        data_keys = self._data[self._type.value].keys()
+        titles_keys = titles_data.keys()
+        
+        processed_keys = list(set(titles_keys) - set(error_titles))
+        old_keys = list(set(data_keys) - set(processed_keys))
+        
+        _ = list(map(
+            self._data[self._type.value].__delitem__, 
+            filter(self._data[self._type.value].__contains__, old_keys))
+        )
+
+    def export_by_watchlist(self, watchlist_dump: TitleDumpByKey) -> typ.List[str]:
+        '''
+        Exports a watchlist data dump.
+        '''
+        error_titles = list()
+        titles_count = len(watchlist_dump.keys())
+        self.progress_handler.initialize_progress_curr(watch_list=self._type, 
+                                                       n_max=titles_count)
+        
+        if USE_MULTITHREADS:
+            error_titles.extend(
+                self.export_watchlist_in_multithreads(watchlist_dump)
+            )
+        else:
+            error_titles.extend(
+                self.export_watchlist_in_order(watchlist_dump)
+            )
+
+        error_titles = [key for key in error_titles if key]
+        _ = self._edit_old_data(watchlist_dump, error_titles)
+        _ = self._data.save_data()
+        
+        return error_titles
     
     def export_titles_dump(self, titles_dump: AnimeByWatchList) -> typ.NoReturn:
         '''
         Exports for the dump anime-base for a user.
         '''
+        _ = self._data.load_data()
+        _ = self._data.prepare_data(self._type)
+        _ = titles_dump.pop('errors')
+        
         error_titles = dict()
-
         for watchlist_name, watchlist_dump in titles_dump.items():
             watchlist_type = WatchListType(watchlist_name)
             self._type = watchlist_type
-            error_titles[self._type.value] = list()
             
-            if USE_MULTITHREADS:
-                error_titles[self._type.value].extend(
-                    self.export_watchlist_in_multithreads(watchlist_dump)
-                )
-            else:
-                error_titles[self._type.value].extend(
-                    self.export_watchlist_in_order(watchlist_dump)
-                )
-
+            _error_titles = self.export_by_watchlist(watchlist_dump)
+            error_titles[self._type.value] = _error_titles
+            
         _ = self.print_error_titles(error_titles)
         return
 #--Finish functional block
