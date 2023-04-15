@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 
 #Custom imports
-from lib.types import AnimeInfoType, WebPage, AnimeType, AnimeStatus
+from lib.types import WebPage, AnimeType, AnimeStatus, LinkedAnimeInfoType
 from lib.interfaces import IWebPageParser
 from lib.tools import OutputLogger
 #--Finish imports block
@@ -65,9 +65,9 @@ class WebPageParser(IWebPageParser):
         '''
         Gets an anime list by the type of watchlist.
         '''
-        all_anime_urls = dict()
         self._logger.info("Parsing anime list...")
         
+        all_anime_urls = dict()
         soup = BeautifulSoup(web_page, 'lxml')
         all_anime = soup.find_all(class_="watchlist__item")
 
@@ -83,7 +83,7 @@ class WebPageParser(IWebPageParser):
         self._logger.success("...parsed.\n")
         return all_anime_urls
 
-    def get_anime_info(self, web_page: WebPage) -> AnimeInfoType:
+    def get_anime_info(self, web_page: WebPage) -> LinkedAnimeInfoType:
         '''
         Returns the anime data by the keys.
         '''
@@ -96,8 +96,8 @@ class WebPageParser(IWebPageParser):
         item_status_year = self._get_item_by_tag(self._status_year_tag, item_list_info)
         a_items_status_year = item_status_year.find_all('a')
         item_other_names = self._get_item_by_tag(self._other_names_tag, item_list_info)
-
-        info_obj = AnimeInfoType(
+        
+        info_obj = LinkedAnimeInfoType(
             poster=self._get_anime_poster(soup),
             name=self._get_anime_name(soup),
             original_name=self._get_anime_original_name(soup),
@@ -106,7 +106,8 @@ class WebPageParser(IWebPageParser):
             genres=self._get_anime_genres(item_genres),
             ep_count=self._get_anime_ep_count(item_episodes),
             year=self._get_anime_year(a_items_status_year),
-            status=self._get_anime_status(a_items_status_year)
+            status=self._get_anime_status(a_items_status_year),
+            link=self._get_link(soup)
         )
         return info_obj
 
@@ -229,5 +230,14 @@ class WebPageParser(IWebPageParser):
             anime_other_names[index] = name.strip()
 
         return anime_other_names
+
+    def _get_link(self, item: BeautifulSoup) -> AnyHttpUrl:
+        '''
+        Parses title link from the item.
+        '''
+        item_head = item.find("head")
+        item_link = item_head.find("link", rel='canonical')
+        link = item_link.get('href')
+        return link
         
 #--Finish functional block
