@@ -185,7 +185,23 @@ class WebPageParser(IWebPageParser):
 
     def get_typed_anime_list(self, web_page: WebPage) -> typ.Dict[str, AnyHttpUrl]:
         '''Gets an anime list by the type of watchlist. '''
-        pass
+        self._logger.info("Parsing titles list...")
+
+        all_titles_urls = dict()
+        soup = BeautifulSoup(web_page, 'lxml')
+        item_table = soup.find(class_="table-responsive2").find("tbody")
+        items_all_titles = item_table.find_all("tr")
+            
+        for item in items_all_titles:
+            item_link = item.find('a', class_=None)
+            cut_title_url = item_link.get("href")
+            title_url = self._url_general + cut_title_url
+            title_dict_key = cut_title_url.split('/')[-1]
+        
+            all_titles_urls[title_dict_key] = title_url
+
+        self._logger.success("...parsed.\n")
+        return all_titles_urls
 
     def get_anime_info(self, web_page: WebPage) -> LinkedAnimeInfoType:
         '''Returns the anime data by the keys. '''
