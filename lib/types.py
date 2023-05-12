@@ -142,7 +142,15 @@ class AnimeInfoType:
     status: AnimeStatus
 
     def asdict(self):
-        return {k: v for k, v in dcls.asdict(self).items()}
+        return {
+            k: v.value if hasattr(v, 'value') else v
+            for k, v in dcls.asdict(self).items()
+        }
+
+    @classmethod
+    def fields_count(cls):
+        # len(dcls.fields(AnimeInfoType))
+        return 9
 
 
 @dcls.dataclass
@@ -158,14 +166,15 @@ AnimeByWatchList = typ.Dict[WatchListType, TitleDumpByKey]
 DEFAULT_DATA_HANDLER = EnabledDataHandler.JSON
 DEFAULT_PROGRESS_HANDLER = EnabledProgressHandler.CACHE
 
+__fields_container = list(WatchListType) + [TITLES_DUMP_KEY_ERRORS]
 ProcessedTitlesDump: typ.Union[str,
                                AnimeByWatchList] = tp_fc.build_dataclass_type(
-                                   name='ProcessedTitlesDump',
-                                   fields_types=[TitleDumpByKey] *
-                                   8,  #len(fields_container), 
-                                   fields_container=list(WatchListType) +
-                                   [TITLES_DUMP_KEY_ERRORS],
-                                   functions=['asdict'])
+   name='ProcessedTitlesDump',
+   fields_types=[TitleDumpByKey] * len(__fields_container),
+   fields_container=__fields_container,
+   functions=['asdict']
+)
+del __fields_container
 
 
 @dcls.dataclass
