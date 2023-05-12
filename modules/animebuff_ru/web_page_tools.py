@@ -20,11 +20,11 @@ class WebPageParser(IWebPageParser):
     the anime information from Animebuff.ru site 
     and its transformation to a unified state.
     '''
-    _type_tag: str
-    _genres_tag: str
-    _episodes_tag: str
-    _status_year_tag: str
-    _other_names_tag: str
+    _tag_type: str = "Тип"
+    _tag_genres: str = "Жанры"
+    _tag_episodes: str = "Эпизоды"
+    _tag_status_year: str = "Статус"
+    _tag_other_names: str = "Другие названия"
     
     def __init__(self, module_url_general: AnyHttpUrl, 
                  queue: Queue=None) -> typ.NoReturn:
@@ -34,12 +34,6 @@ class WebPageParser(IWebPageParser):
                                     name='parser_animebuff_ru').logger
         
         self._url_general = module_url_general
-        
-        self._type_tag = "Тип"
-        self._genres_tag = "Жанры"
-        self._episodes_tag = "Эпизоды"
-        self._status_year_tag = "Статус"
-        self._other_names_tag = "Другие названия"
 
     def parse_all_titles_count(self, web_page: WebPage) -> int:
         '''
@@ -90,12 +84,12 @@ class WebPageParser(IWebPageParser):
         soup = BeautifulSoup(web_page, 'lxml')
         item_list_info = soup.find(class_="anime__info-list")
 
-        item_type = self._get_item_by_tag(self._type_tag, item_list_info)
-        item_genres = self._get_item_by_tag(self._genres_tag, item_list_info)
-        item_episodes = self._get_item_by_tag(self._episodes_tag, item_list_info)
-        item_status_year = self._get_item_by_tag(self._status_year_tag, item_list_info)
+        item_type = self._get_item_by_tag(self._tag_type, item_list_info)
+        item_genres = self._get_item_by_tag(self._tag_genres, item_list_info)
+        item_episodes = self._get_item_by_tag(self._tag_episodes, item_list_info)
+        item_status_year = self._get_item_by_tag(self._tag_status_year, item_list_info)
         a_items_status_year = item_status_year.find_all('a')
-        item_other_names = self._get_item_by_tag(self._other_names_tag, item_list_info)
+        item_other_names = self._get_item_by_tag(self._tag_other_names, item_list_info)
         
         info_obj = LinkedAnimeInfoType(
             poster=self._get_anime_poster(soup),
@@ -153,13 +147,33 @@ class WebPageParser(IWebPageParser):
 
         return anime_original_name
 
+    def _get_other_names(self, item: BeautifulSoup) -> typ.List[str]:
+        '''
+        Parses anime other names from the item.
+        '''
+        if item is None: return list()
+            
+        item_class = 'anime__info-value'
+        str_other_names = item.find(class_=item_class)            
+        str_other_names = str_other_names.text.replace('\n', '')
+        anime_other_names = str_other_names.split(',')
+        
+        for name in anime_other_names:
+            index = anime_other_names.index(name)
+            anime_other_names[index] = name.strip()
+
+        return anime_other_names
+
     def _get_anime_type(self, item: BeautifulSoup) -> AnimeType:
         '''
         Parses anime type from the item.
         '''
         type_href = item.find("a").get("href")
         anime_type = type_href.split('/')[-1]
-        anime_type = 'film' if anime_type == 'polnometrazhnyi-film' else anime_type
+        
+        _movie_type = AnimeType.MOVIE.value
+        _query_type = 'polnometrazhnyi-film'
+        anime_type = _movie_type if anime_type == _query_type else anime_type
 
         return anime_type
 
@@ -183,8 +197,8 @@ class WebPageParser(IWebPageParser):
         
         if len(ep_items) < 2: return None
             
-        ep_now = ep_str_info.split(' ')[0]
-        ep_full = ep_str_info.split(' ')[-1]
+        ep_now = ep_items[0]
+        ep_full = ep_items[-1]
         
         anime_ep_count = None
         try:
@@ -194,16 +208,6 @@ class WebPageParser(IWebPageParser):
 
         return anime_ep_count
 
-    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatus:
-        '''
-        Parses anime status from the item.
-        '''
-        item_status = item[0]
-        status_href = item_status.get('href')
-        anime_status = status_href.split('/')[-1]
-        
-        return anime_status
-
     def _get_anime_year(self, item: BeautifulSoup) -> int:
         '''
         Parses anime year from the item.
@@ -211,25 +215,23 @@ class WebPageParser(IWebPageParser):
         item_year = item[-1]
         year_href = item_year.get('href')
         anime_year = year_href.split('/')[-1]
-        
+
+        try:
+            anime_year = int(anime_year)
+        except:
+            anime_year = None
         return anime_year
 
-    def _get_other_names(self, item: BeautifulSoup) -> typ.List[str]:
+    def _get_anime_status(self, item: BeautifulSoup) -> AnimeStatus:
         '''
-        Parses anime other names from the item.
+        Parses anime status from the item.
         '''
-        if item is None: return list()
-            
-        item_class = 'anime__info-value'
-        str_other_names = item.find(class_=item_class)            
-        str_other_names = str_other_names.text.replace('\n', '')
-        anime_other_names = str_other_names.split(',')
+        item_status = item[0]
+        status_href = item_status.get('href')
+        status_text = status_href.split('/')[-1]
         
-        for name in anime_other_names:
-            index = anime_other_names.index(name)
-            anime_other_names[index] = name.strip()
-
-        return anime_other_names
+        anime_status = AnimeStatus(status_text)
+        return anime_status
 
     def _get_link(self, item: BeautifulSoup) -> AnyHttpUrl:
         '''

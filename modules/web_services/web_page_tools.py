@@ -16,7 +16,7 @@ from configs.settings import (
     UPDATE_JSON_DUMPS, TITLES_DUMP_KEY_ERRORS
 )
 from lib.types import (
-    WatchListType, WebPage, RequestMethod
+    WatchListType, WebPage, RequestMethod, AnimeInfoType
 )
 from lib.interfaces import (
     ISiteSettings, IWebPageParser, 
@@ -103,7 +103,7 @@ class WebPageService:
         web_page = None
         file_name = self._get_page_filename(type, page_filename)
         file_path = self._get_filepath(file_name)
-        self._logger.info(f"Loading web-page file \"{file_name}\"...")
+        self._logger.info(f'Loading web-page file "{file_name}"...')
 
         try:
             with open(file_path, 'r') as file:
@@ -128,7 +128,7 @@ class WebPageService:
 
         if not os.path.exists(self.dir_path):
             self._logger.info(
-                f"Directory \"{self.dir_name}\" not exists. Creating...")
+                f'Directory "{self.dir_name}" not exists. Creating...')
             try:
                 os.mkdir(self.dir_path)
                 self._logger.success("...done.")
@@ -136,7 +136,7 @@ class WebPageService:
                 self._logger.error("...error.")
                 return False
 
-        self._logger.info(f"Saving the html-response to \"{file_name}\"...")
+        self._logger.info(f'Saving the html-response to "{file_name}"...')
         try:
             with open(file_path, 'w') as file:
                 file.write(str(web_page))
@@ -212,8 +212,8 @@ class WebPageParser(IWebPageParser):
     _parser_mod: IWebPageParser
     _type: WatchListType
     _web_serv: WebPageService
+    _data: IDataHandler
     progress_handler: IProgressHandler
-    data: IDataHandler
 
     def __init__(self,
                  module: IConnectedModule,
@@ -233,7 +233,7 @@ class WebPageParser(IWebPageParser):
         url_general = self._config_mod.url_general
         dump_file_name = self._module.get_json_dump_name()
         
-        self.data = DefaultDataHandler(module_name=module_name, 
+        self._data = DefaultDataHandler(module_name=module_name, 
                                        queue=self._queue,
                                        dump_file_name=dump_file_name)
         self._web_serv = WebPageService(module_name, 
@@ -250,13 +250,14 @@ class WebPageParser(IWebPageParser):
         
         ! Not worked with multiprocessing tools !
         '''
-        method_list = inspect.getmembers(self._parser_mod,
-                                         predicate=inspect.isfunction)
-
-        for method_name, method in method_list:
-            if method_name == '__init__': continue
-            typed_method = types.MethodType(method, self)
-            setattr(self, method_name, typed_method)
+        for attr_name, attr in inspect.getmembers(self._parser_mod):
+            if attr_name.startswith('__'): 
+                continue
+            elif inspect.isfunction(attr):
+                typed_method = types.MethodType(attr, self)
+                setattr(self, attr_name, typed_method)
+            else:
+                setattr(self, attr_name, attr)
 
     def log_parser_errors(
             self,
@@ -266,12 +267,12 @@ class WebPageParser(IWebPageParser):
             self._logger.critical(
                 f"Aborted:\n* Page key: {key};\n* Page URL: {url}\n")
 
-        self.data.prepare_data(TITLES_DUMP_KEY_ERRORS)
-        self.data[TITLES_DUMP_KEY_ERRORS].update(error_web_pages)
+        self._data.prepare_data(TITLES_DUMP_KEY_ERRORS)
+        self._data[TITLES_DUMP_KEY_ERRORS].update(error_web_pages)
 
     def _is_update_needed(self, anime_key: str) -> bool:
         '''Check the need to update the json dump.'''
-        if anime_key in self.data[self._type.value]:
+        if anime_key in self._data[self._type.value]:
             self._logger.info("...record already exists...")
             if not UPDATE_JSON_DUMPS:
                 self._logger.info("...canceled. Updates are not needed.\n")
@@ -291,6 +292,13 @@ class WebPageParser(IWebPageParser):
                                               url=anime_url)
         return web_page
 
+    def _make_error_title(self, anime_key: str) -> AnimeInfoType:
+        '''Makes a data structure for the error title.'''
+        args = [None] * AnimeInfoType.fields_count()
+        _data = AnimeInfoType(*args)
+        _data.name = anime_key
+        return _data
+
     @ListenerLogger.send_stop_msg
     def get_anime_info_json(
         self, anime_item: typ.Tuple[str, AnyHttpUrl]
@@ -304,10 +312,11 @@ class WebPageParser(IWebPageParser):
 
         web_page = self._get_web_page(*anime_item)
         if not web_page:
-            return dict({anime_key: anime_url})
+            _data = self._make_error_title(anime_key)
+            return dict({anime_key: _data.asdict()})
 
         anime_info = self.get_anime_info(web_page)
-        self.data[self._type.value].update({anime_key: anime_info.asdict()})
+        self._data[self._type.value].update({anime_key: anime_info.asdict()})
         self.progress_handler.increase_progress_curr()
 
         self._logger.info("...JSON dump updated.\n")
@@ -350,27 +359,27 @@ class WebPageParser(IWebPageParser):
         return error_web_pages
 
     def _edit_old_data(self, 
-                       all_anime_urls: typ.Dict[str, AnyHttpUrl], 
+                       titles_data: typ.Dict[str, AnyHttpUrl], 
                        error_web_pages: typ.Dict[str, AnyHttpUrl]
                       ) -> typ.NoReturn:
         '''
         Removes obsolete keys.
         '''
-        data_keys = self.data[self._type.value].keys()
-        watchlist_keys = all_anime_urls.keys()
+        data_keys = self._data[self._type.value].keys()
+        titles_keys = titles_data.keys()
         error_keys = error_web_pages.keys()
         
-        processed_keys = list(set(watchlist_keys) - set(error_keys))
+        processed_keys = list(set(titles_keys) - set(error_keys))
         old_keys = list(set(data_keys) - set(processed_keys))
         
         _ = list(map(
-            self.data[self._type.value].__delitem__, 
-            filter(self.data[self._type.value].__contains__, old_keys))
+            self._data[self._type.value].__delitem__, 
+            filter(self._data[self._type.value].__contains__, old_keys))
         )
 
     def get_anime_data(self, web_page: WebPage) -> typ.NoReturn:
         '''Gets anime data for all links.'''
-        error_web_pages = list()
+        error_web_pages = dict()
         all_anime_urls = self.get_typed_anime_list(web_page)
         titles_count = len(all_anime_urls.keys())
         
@@ -397,12 +406,12 @@ class WebPageParser(IWebPageParser):
             return
         self._logger.success('...webpage received.')
 
-        _ = self.data.load_data()
-        _ = self.data.prepare_data(self._type)
+        _ = self._data.load_data()
+        _ = self._data.prepare_data(self._type)
         
         _ = self.get_anime_data(web_page)
 
-        _ = self.data.save_data()
+        _ = self._data.save_data()
 
     def get_all_titles_count(self) -> int:
         '''
