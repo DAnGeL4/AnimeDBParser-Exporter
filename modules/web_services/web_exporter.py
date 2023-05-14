@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import Logger
 
 #Custom imports
-from configs.settings import USE_MULTITHREADS
+from configs.settings import USE_MULTITHREADS, TITLES_DUMP_KEY_ERRORS
 from lib.types import (
     RequestMethod, WebPage,
     AnimeInfoType, LinkedAnimeInfoType, AnimeByWatchList,
@@ -186,18 +186,17 @@ class TitleExporter:
         Saves a error titles of an anime for a user to file.
         '''
         self._logger.info("Saving error titles of an anime for a user...")
-            
-        json_dump_name = self._module.get_json_dump_name()
-                            
-        data = self._loader(module_name=self._module_name, 
-                            queue=self._queue,
-                            dump_file_name=json_dump_name)
-        _ = data.update(dict(error_titles))
-        res = data.save_data()
+        
+        self._data[TITLES_DUMP_KEY_ERRORS] = dict()
+        for key in error_titles.keys():
+            self._data[TITLES_DUMP_KEY_ERRORS].update(
+                error_titles[key]
+            )
+        res = self._data.save_data()
         
         if res: self._logger.success("...error titles saved.\n")
         else: self._logger.error("...not saved.\n")
-        return None
+        return
 
     def print_error_titles(self, error_titles: typ.Dict[str, list]) -> typ.NoReturn:
         '''Displays titles with failed export.'''
@@ -216,37 +215,37 @@ class TitleExporter:
         self._data[self._type.value].update({
             title_key: title_data.asdict()
         })
-        self.progress_handler.increase_progress_curr()
+        self._progress_handler.increase_progress_curr()
 
     @ListenerLogger.send_stop_msg
     def export_selected_title(self, title_item: typ.Tuple[str, TitleDump]
-                             ) -> typ.Union[str, None]:
+                             ) -> typ.Dict[str, AnimeInfoType]:
         '''Exports for the selected dump of title.'''
         title_key, title_dump = title_item
         title_data = None
         self._logger.info(f"Starting the export of title ({title_key})...")
         
         try:
-            title_data = AnimeInfoType(**title_dump)
+            title_data = LinkedAnimeInfoType(**title_dump)
         except:
             self._logger.error(f"Bad title data. (Key: {title_key})")
-            return title_key
+            return  {title_key: title_dump}
         
         web_page = self.search_title(title_data)
-        if not web_page: return title_key
+        if not web_page: return {title_key: title_dump}
             
         res = self.submit_action(web_page)
-        if not res: return title_key
+        if not res: return {title_key: title_dump}
             
         _ = self._update_data(title_key, web_page)
-        self._logger.info(f"...title exports are completed ({title_key}).\n")
+        self._logger.info(f"...title export are completed ({title_key}).\n")
         return None
 
     @ListenerLogger.listener_preparing
     def export_watchlist_in_multithreads(self, watchlist_dump: TitleDumpByKey
-                                        ) -> typ.List[typ.Union[str, None]]:
+                                        ) -> typ.Dict[str, AnimeInfoType]:
         '''Exports for a watchlist dump in multi-threads.'''
-        error_titles = list()
+        error_titles = dict()
         self._parser = WebPageParser(self._module, self._type, self._queue, 
                                      self._progress_handler)        
                                           
@@ -262,33 +261,34 @@ class TitleExporter:
             for future in as_completed(futures):
                 error_title = future.result()
                 if error_title:
-                    error_titles.append(error_title)
+                    error_titles.update(error_title)
                 
         return error_titles
 
     def export_watchlist_in_order(self, watchlist_dump: TitleDumpByKey
-                                 ) -> typ.List[typ.Union[str, None]]:
+                                 ) -> typ.Dict[str, AnimeInfoType]:
         '''Exports for a watchlist dump in one stream.'''
-        error_titles = list()
+        error_titles = dict()
         self._parser = WebPageParser(self._module, self._type, 
                                      self._progress_handler)
         
         for title_item in watchlist_dump.items():
             error_title = self.export_selected_title(title_item)
             if error_title:
-                error_titles.append(error_title)
+                error_titles.update(error_title)
                 
         return error_titles
 
     def _edit_old_data(self, 
                        titles_data: typ.Dict[str, AnyHttpUrl], 
-                       error_titles: typ.List[str]
+                       error_titles: typ.Dict[str, AnimeInfoType]
                       ) -> typ.NoReturn:
         '''Removes obsolete keys.'''
         data_keys = self._data[self._type.value].keys()
         titles_keys = titles_data.keys()
+        error_keys = error_titles.keys()
         
-        processed_keys = list(set(titles_keys) - set(error_titles))
+        processed_keys = list(set(titles_keys) - set(error_keys))
         old_keys = list(set(data_keys) - set(processed_keys))
         
         _ = list(map(
@@ -296,23 +296,21 @@ class TitleExporter:
             filter(self._data[self._type.value].__contains__, old_keys))
         )
 
-    def export_by_watchlist(self, watchlist_dump: TitleDumpByKey) -> typ.List[str]:
+    def export_by_watchlist(self, watchlist_dump: TitleDumpByKey
+                           ) -> typ.Dict[str, AnimeInfoType]:
         '''Exports a watchlist data dump.'''
-        error_titles = list()
+        error_titles = dict()
         titles_count = len(watchlist_dump.keys())
-        self.progress_handler.initialize_progress_curr(watch_list=self._type, 
+        
+        _ = self._data.prepare_data(self._type)
+        self._progress_handler.initialize_progress_curr(watch_list=self._type, 
                                                        n_max=titles_count)
         
         if USE_MULTITHREADS:
-            error_titles.extend(
-                self.export_watchlist_in_multithreads(watchlist_dump)
-            )
+            error_titles = self.export_watchlist_in_multithreads(watchlist_dump)
         else:
-            error_titles.extend(
-                self.export_watchlist_in_order(watchlist_dump)
-            )
+            error_titles = self.export_watchlist_in_order(watchlist_dump)
 
-        error_titles = [key for key in error_titles if key]
         _ = self._edit_old_data(watchlist_dump, error_titles)
         _ = self._data.save_data()
         
@@ -321,7 +319,6 @@ class TitleExporter:
     def export_titles_dump(self, titles_dump: AnimeByWatchList) -> typ.NoReturn:
         '''Exports for the dump anime-base for a user.'''
         _ = self._data.load_data()
-        _ = self._data.prepare_data(self._type)
         _ = titles_dump.pop('errors')
         
         error_titles = dict()
