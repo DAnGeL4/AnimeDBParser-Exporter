@@ -90,8 +90,10 @@ class TitleExporter:
                        finded_title: LinkedAnimeInfoType) -> bool:
         '''Compares two titles of similar types.'''
         if query_title.original_name != finded_title.original_name and \
-                                    query_title.name != finded_title.name:
-            return False
+                           query_title.name != finded_title.name:
+            if finded_title.original_name not in query_title.other_names and \
+                                finded_title.name not in query_title.other_names:
+                return False
         if query_title.type != finded_title.type:
             return False
         if query_title.year != finded_title.year:
