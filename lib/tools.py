@@ -36,7 +36,6 @@ class OutputLogger:
                  name: str="general", level: str="INFO"):
         self.logger = logging.getLogger(name)
         self.name = self.logger.name
-        _ = self._add_logger_success_level()
                      
         self._level = getattr(logging, level)
         self._queue = queue
@@ -50,9 +49,10 @@ class OutputLogger:
                      
         self._redirector = redirect_stdout(self)
 
-    @staticmethod
-    def base_configure_logging(level=None) -> typ.NoReturn:
+    @classmethod
+    def base_configure_logging(cls, level=None) -> typ.NoReturn:
         '''Configures the logging system.'''
+        cls._add_logger_success_level()
         level = logging.INFO if not level else level
         logging.basicConfig(
             level=level,
@@ -60,14 +60,19 @@ class OutputLogger:
             datefmt=OutputLogger._datefmt
         )
 
-    def _add_logger_success_level(self) -> typ.NoReturn:
+    @classmethod
+    def _add_logger_success_level(cls) -> typ.NoReturn:
         '''
         Adds a new logging level for success type.
         '''
         logging.SUCCESS = 25  # between WARNING and INFO
         logging.addLevelName(logging.SUCCESS, 'SUCCESS')
-        setattr(self.logger, 'success', lambda message, 
-                *args: self.logger._log(logging.SUCCESS, message, args))
+        
+        def success(self, message, *args, **kws):
+            if self.isEnabledFor(logging.SUCCESS):
+                self._log(logging.SUCCESS, message, args, **kws) 
+                
+        logging.Logger.success = success
 
     @classmethod
     def _get_handlers(cls, duplicate: bool, queue: mp.Queue) -> typ.List[logging.Handler]:
