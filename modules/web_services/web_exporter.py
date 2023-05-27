@@ -53,14 +53,16 @@ class TitleExporter:
         self._queue = queue
                      
         dump_file_name = self._module.get_json_dump_name()
+        _logger_name = 'title_exp'
                      
         self._parser = WebPageParser(self._module, self._type, 
                                      self._progress_handler)
         self._data = self._loader(module_name=self._module_name, 
-                                  queue=self._queue,
+                                  logger_suffix=_logger_name,
+                                  #queue=self._queue,
                                   dump_file_name=dump_file_name)
         self._logger = OutputLogger(duplicate=True, queue=self._queue, 
-                                    name="title_exp").logger
+                                    name=_logger_name).logger
     
     def get_file_name_from_url(self, url: AnyHttpUrl) -> typ.Union[str, Path]:
         '''

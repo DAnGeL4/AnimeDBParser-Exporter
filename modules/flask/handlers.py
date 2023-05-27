@@ -31,18 +31,22 @@ class JSONDataHandler(IDataHandler):
     '''
     _dump_file_name: typ.Union[str, Path]
 
-    def __init__(self, data: dict = dict(), module_name: str = '',
-                 queue: mp.Queue = None, **kwargs):
-        dump_arg_name = 'dump_file_name'
-        assert dump_arg_name in kwargs, f"Missing '{dump_arg_name}' argument."
+    def __init__(self, data: dict = {}, module_name: str = '', 
+                 logger_suffix: str = '', queue: mp.Queue = None, **kwargs):
+        arg_dump_name = 'dump_file_name'
+        assert arg_dump_name in kwargs, f"Missing '{arg_dump_name}' argument."
                      
         _ = super().__init__(dict(data))
-
+                     
+        _logger_name = "json_handler"
+        if logger_suffix:
+            _logger_name += "_" + logger_suffix
+                     
         self._module_name = module_name
-        self._dump_file_name = kwargs[dump_arg_name]
+        self._dump_file_name = kwargs[arg_dump_name]
         self._logger = OutputLogger(duplicate=True,
                                     queue=queue,
-                                    name="json_handler"
+                                    name=_logger_name
                                    ).logger
         
     def _load_json_data(self) -> typ.Dict[str, typ.Any]:
@@ -65,11 +69,11 @@ class JSONDataHandler(IDataHandler):
             self._logger.success("...loaded.")
         return json_data
 
-    def _prepare_json_data(self, type: WatchListType) -> typ.Dict[str, typ.Any]:
+    def _prepare_json_data(self, type_: WatchListType) -> typ.Dict[str, typ.Any]:
         '''
         Prepares data into a valid format for JSON.
         '''
-        key = type.value if hasattr(type, 'value') else type
+        key = type_.value if hasattr(type_, 'value') else type_
         if not key in self:
             self[key] = dict()
 
