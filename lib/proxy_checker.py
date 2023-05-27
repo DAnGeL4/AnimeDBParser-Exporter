@@ -15,7 +15,7 @@ from configs.settings import (
     CORRECT_PROXIES_FILE, DOWNLOAD_PROXY_LISTS,
     CHECK_PROXIES
 )
-from lib.tools import OutputLogger
+from .tools import OutputLogger
 #--Finish imports block
 
 
