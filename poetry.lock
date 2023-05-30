@@ -99,31 +99,12 @@ html5lib = ["html5lib"]
 lxml = ["lxml"]
 
 [[package]]
-name = "blinker"
-version = "1.6.2"
-description = "Fast, simple object-to-object and broadcast signaling"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[[package]]
 name = "certifi"
-version = "2023.5.7"
+version = "2022.6.15"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
 python-versions = ">=3.6"
-
-[[package]]
-name = "cffi"
-version = "1.15.1"
-description = "Foreign Function Interface for Python calling C code."
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-pycparser = "*"
 
 [[package]]
 name = "cfscrape"
@@ -708,7 +689,6 @@ argon2-cffi-bindings = []
 async-timeout = []
 attrs = []
 beautifulsoup4 = []
-blinker = []
 certifi = []
 cffi = []
 cfscrape = []
