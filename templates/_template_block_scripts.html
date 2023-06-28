@@ -5,15 +5,12 @@
     <script src="{{ url_for('static', filename='js/pills_content_changer.js')}}"></script>
     <script type="text/javascript">
         pills_content_changer({{ session['parser'] | tojson }},
-                              {{ session['exporter'] | tojson }})
+                              {{ session['exporter'] | tojson }});
     </script>
 
     <script src="{{ url_for('static', filename='js/modal_show.js')}}"></script>
     <script type="text/javascript">
-        modal_show_prapring({{ settings['parse_modules'] | tojson }},
-                            {{ settings['export_modules'] | tojson }},
-                            {{ session['parser'] | tojson }},
-                            {{ session['exporter'] | tojson }})
+        modal_show_prapring();
     </script>
 
     <script src="{{ url_for('static', filename='js/send_setup.js')}}"></script>
@@ -24,35 +21,36 @@
         function onclick_action() {
             $(document).ready(function(){
                 var action = $('#tab_action_button').val(),
-                    username = null
+                    username = null;
               
                 if (action === "parse") {
-                    username = {{ session['parser']['username'] | tojson }}
+                    username = {{ session['parser']['username'] | tojson }};
                 } else if (action === "export") {
-                    username = {{ session['exporter']['username'] | tojson }}
-                }
+                    username = {{ session['exporter']['username'] | tojson }};
+                };
       
-                _ = do_action(username)
-            })
-        }
+                _ = do_action(username);
+            });
+        };
     </script>
 
     <script src="{{ url_for('static', filename='js/offcanvas_content_change.js')}}"></script>
     <script type="text/javascript">
       $(document).ready(function() {
-          $('.tab-pane .list-group-item').on('click', function() {
+          $('[name=titles]').on("click", '.tab-pane .list-group-item', 
+                          function(){
               var clicked_item = $(this),
                   case_data = {
                       'parse':  {{ parsed_titles | tojson }},
                       'export': {{ exported_titles | tojson }}
-                  }
+                  };
 
-              var title_data = get_title_data(clicked_item, case_data)
-              _ = fill_offcanvas(clicked_item, title_data)
-          })
-      })
+              var title_data = get_title_data(clicked_item, case_data);
+              _ = fill_offcanvas(clicked_item, title_data);
+          });
+      });
     </script>
 
     <script type="text/javascript">
-        _ = send_state()
+        _ = send_state();
     </script>

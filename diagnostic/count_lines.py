@@ -28,6 +28,7 @@ ignore_list = [
     './logs',
     './proxy_lists',
     './web_pages',
+    'img',
 ]
 #--Finish global constant block
 

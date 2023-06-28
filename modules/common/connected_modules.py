@@ -3,26 +3,31 @@
 from enum import Enum
 
 #Custom imports
-from configs import abstract_classes as ac
+from lib.types import ServerAction
+from lib.interfaces import IConnectedModule
 
 from modules.animebuff_ru.config import AnimeBuffRuConfig
 from modules.animebuff_ru.web_page_tools import WebPageParser as AnimeBuffRuParser
 
 from modules.animego_org.config import AnimeGoOrgConfig
 from modules.animego_org.web_page_tools import WebPageParser as AnimeGoOrgParser
+
 #--Finish imports block
 
 
-#--Start functional block
-class ModuleAnimeBuffRu(ac.ConnectedModuleType):
+#--Start global constants block
+class ModuleAnimeBuffRu(IConnectedModule):
     '''Contains the submodules for the animebuff.ru site.'''
+    presented_name = "AnimeBuff.Ru"
     module_name = "animebuff_ru"
     json_dump_name = module_name + ".json"
     config_module = AnimeBuffRuConfig
     parser_module = AnimeBuffRuParser
-    
-class ModuleAnimeGoOrg(ac.ConnectedModuleType):
+
+
+class ModuleAnimeGoOrg(IConnectedModule):
     '''Contains the submodules for the animego.org site.'''
+    presented_name = "AnimeGo.Org"
     module_name = "animego_org"
     json_dump_name = module_name + ".json"
     config_module = AnimeGoOrgConfig
@@ -33,13 +38,23 @@ EnabledParserModules = list([
     ModuleAnimeBuffRu,
 ])
 
-EnabledSubmitModules = list([
+EnabledExporterModules = list([
     ModuleAnimeGoOrg,
 ])
 
+EnabledModules = Enum(
+    'EnabledModules', {
+        ServerAction.PARSE.value: EnabledParserModules,
+        ServerAction.EXPORT.value: EnabledExporterModules
+    })
+EnabledModules.__doc__ = "Contains lists of modules by actions."
 
-class EnabledModules(Enum):
-    '''Contains lists of modules by actions.'''
-    parse = EnabledParserModules
-    export = EnabledSubmitModules
-#--Finish functional block
+NameToModuleCompatibility = Enum(
+    'NameToModuleCompatibility', {
+        mod.presented_name: mod 
+        for mod in [*EnabledParserModules, *EnabledExporterModules]
+    })
+NameToModuleCompatibility.__doc__ = \
+        "Contains lists of modules by presented names."
+
+#--Finish global constants block

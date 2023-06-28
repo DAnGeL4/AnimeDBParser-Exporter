@@ -5,13 +5,17 @@ import logging
 import traceback
 import functools
 import typing as typ
-import multiprocessing as mp
+import billiard as mp
 from types import TracebackType
 from contextlib import redirect_stdout
 from logging.handlers import QueueHandler
 
 #Custom imports
-from configs import settings as cfg
+from configs.settings import (
+    WRITE_LOG_TO_FILE, GLOBAL_LOG_FILE,
+    ENABLE_PARSING_MODULES, ENABLE_EXPORTER_MODULES
+)
+from .types import ServerAction
 #--Finish imports block
 
 
@@ -32,7 +36,6 @@ class OutputLogger:
                  name: str="general", level: str="INFO"):
         self.logger = logging.getLogger(name)
         self.name = self.logger.name
-        _ = self._add_logger_success_level()
                      
         self._level = getattr(logging, level)
         self._queue = queue
@@ -46,9 +49,10 @@ class OutputLogger:
                      
         self._redirector = redirect_stdout(self)
 
-    @staticmethod
-    def base_configure_logging(level=None) -> typ.NoReturn:
+    @classmethod
+    def base_configure_logging(cls, level=None) -> typ.NoReturn:
         '''Configures the logging system.'''
+        cls._add_logger_success_level()
         level = logging.INFO if not level else level
         logging.basicConfig(
             level=level,
@@ -56,14 +60,19 @@ class OutputLogger:
             datefmt=OutputLogger._datefmt
         )
 
-    def _add_logger_success_level(self) -> typ.NoReturn:
+    @classmethod
+    def _add_logger_success_level(cls) -> typ.NoReturn:
         '''
         Adds a new logging level for success type.
         '''
         logging.SUCCESS = 25  # between WARNING and INFO
         logging.addLevelName(logging.SUCCESS, 'SUCCESS')
-        setattr(self.logger, 'success', lambda message, 
-                *args: self.logger._log(logging.SUCCESS, message, args))
+        
+        def success(self, message, *args, **kws):
+            if self.isEnabledFor(logging.SUCCESS):
+                self._log(logging.SUCCESS, message, args, **kws) 
+                
+        logging.Logger.success = success
 
     @classmethod
     def _get_handlers(cls, duplicate: bool, queue: mp.Queue) -> typ.List[logging.Handler]:
@@ -76,14 +85,14 @@ class OutputLogger:
             )
             return handlers
         
-        if cfg.WRITE_LOG_TO_FILE:
-            handler = logging.FileHandler(cfg.GLOBAL_LOG_FILE)
+        if WRITE_LOG_TO_FILE:
+            handler = logging.FileHandler(GLOBAL_LOG_FILE)
             handler.setFormatter(cls._formatter)
             handlers.append(
                 handler
             )
             
-        if duplicate or not cfg.WRITE_LOG_TO_FILE:
+        if duplicate or not WRITE_LOG_TO_FILE:
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(cls._formatter)
             handlers.append(
@@ -124,7 +133,7 @@ class OutputLogger:
         @functools.wraps(redirected_function)
         def wrapper(*args, **kwargs):
             
-            if cfg.WRITE_LOG_TO_FILE:
+            if WRITE_LOG_TO_FILE:
                 with OutputLogger(duplicate):
                     res = redirected_function(*args, **kwargs)
             else:
@@ -241,5 +250,27 @@ class ListenerLogger:
             return res
             
         return wrapper
+
+
+def is_empty_args(args: typ.List[typ.Any]) -> bool:
+    '''
+    Returns the True if at least one of the arguments is empty.
+    '''
+    err = False
+    for arg in args:
+        if arg is None:
+            err = True
+            break
+    return err
+    
+def is_allowed_action(action: ServerAction) -> bool:
+    '''
+    Checks whether the action is enabled in config.
+    '''
+    allow_values = dict({
+        ServerAction.PARSE: ENABLE_PARSING_MODULES,
+        ServerAction.EXPORT: ENABLE_EXPORTER_MODULES,
+    })
+    return allow_values[action]
 
 #--Finish decorators block

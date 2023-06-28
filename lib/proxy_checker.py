@@ -7,9 +7,15 @@ from pathlib import Path
 import typing as typ
 from functools import partial
 from pydantic import IPvAnyAddress, AnyUrl
+
 #Custom imports
-from configs import settings as cfg
-from modules.general.tools import OutputLogger
+from configs.settings import (
+    LOCAL_PROXY_FILES, ONLINE_PROXY_LISTS,
+    REQUEST_PROXIES_FORMAT, PROXY_LISTS_DIR,
+    CORRECT_PROXIES_FILE, DOWNLOAD_PROXY_LISTS,
+    CHECK_PROXIES
+)
+from .tools import OutputLogger
 #--Finish imports block
 
 
@@ -20,9 +26,9 @@ class ProxyChecker:
     '''
     #Constant block
     #----------------------------
-    local_proxy_files: Path = cfg.LOCAL_PROXY_FILES
-    online_proxy_lists: Path = cfg.ONLINE_PROXY_LISTS 
-    proxies: typ.Dict[str, IPvAnyAddress] = cfg.REQUEST_PROXIES_FORMAT
+    local_proxy_files: Path = LOCAL_PROXY_FILES
+    online_proxy_lists: Path = ONLINE_PROXY_LISTS 
+    proxies: typ.Dict[str, IPvAnyAddress] = REQUEST_PROXIES_FORMAT
     url_to_check: AnyUrl = None
     _module_name: str = None
     _correct_proxy_filename: Path = None
@@ -33,7 +39,7 @@ class ProxyChecker:
         self._queue = queue
 
         filename = f"{self._module_name}_correct_proxies"
-        self._correct_proxy_filename = os.path.join(cfg.PROXY_LISTS_DIR, filename)
+        self._correct_proxy_filename = os.path.join(PROXY_LISTS_DIR, filename)
         
         _redir_out = OutputLogger(duplicate=True, queue=self._queue, 
                                  name="proxy_chk")
@@ -49,7 +55,7 @@ class ProxyChecker:
             self._logger.info(f"Downloading proxy list ({file_name})...")
             
             response = requests.get(link)
-            write_filename = os.path.join(cfg.PROXY_LISTS_DIR, file_name)
+            write_filename = os.path.join(PROXY_LISTS_DIR, file_name)
             open(write_filename, 'wb').write(response.content)
             
             self._logger.success("...done.")
@@ -111,7 +117,7 @@ class ProxyChecker:
             
         return
 
-    def load_correct_proxies(self, file_name: Path=cfg.CORRECT_PROXIES_FILE) -> typ.List[AnyUrl]:
+    def load_correct_proxies(self, file_name: Path=CORRECT_PROXIES_FILE) -> typ.List[AnyUrl]:
         '''
         Reads a proxy list from the file.
         '''
@@ -137,7 +143,7 @@ class ProxyChecker:
         self._logger.info("Checking the proxy list...")
         
         for protocol, file_name in proxy_files.items():
-            file_path = os.path.join(cfg.PROXY_LISTS_DIR, file_name)
+            file_path = os.path.join(PROXY_LISTS_DIR, file_name)
             data = self.check_proxy_list(file_path, protocol)
             data = list(filter(lambda x: x is not None, data))
             
@@ -153,9 +159,9 @@ class ProxyChecker:
         Prepairs proxy lists for work.
         '''
         self.url_to_check = url_general
-        if cfg.DOWNLOAD_PROXY_LISTS:
+        if DOWNLOAD_PROXY_LISTS:
             _ = self.donload_proxy_lists()
-        if cfg.CHECK_PROXIES:
+        if CHECK_PROXIES:
             _ = self.get_proxy_list()
 
 #--Finish functional block

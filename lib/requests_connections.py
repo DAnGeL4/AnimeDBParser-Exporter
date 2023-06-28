@@ -6,19 +6,20 @@ import typing as typ
 from pydantic import AnyUrl, AnyHttpUrl, IPvAnyAddress
 from multiprocessing import Queue
 from requests.cookies import RequestsCookieJar
+
 #Custom imports
-from configs import abstract_classes as ac
-from configs.settings import WebPage, Session, WatchListTypes, RequestMethods
-from modules.general.tools import OutputLogger
-from modules.general.proxy_checker import ProxyChecker
+from .types import WebPage, Session, WatchListType, RequestMethod
+from .interfaces import ISiteSettings
+from .proxy_checker import ProxyChecker
+from .tools import OutputLogger
 #--Finish imports block
 
 
 #--Start functional block
-class RequestsConnections(ac.SiteSettings):
+class RequestsConnections(ISiteSettings):
     '''A class for working with requests connections.'''
 
-    def __init__(self, module_name: str, config_obj: ac.SiteSettings, queue: Queue=None):
+    def __init__(self, module_name: str, config_obj: ISiteSettings, queue: Queue=None):
         self._module_name = module_name
         self._queue = queue
         _redir_out = OutputLogger(duplicate=True, queue=self._queue,
@@ -80,14 +81,14 @@ class RequestsConnections(ac.SiteSettings):
         self._logger.critical("...ABORTED!\n")
 
     def _get_request_method(self, session: Session, 
-                            method: RequestMethods) -> typ.Callable:
+                            method: RequestMethod) -> typ.Callable:
         '''
         Selects the desired method of sending a request.
         '''
         request_method = None
-        if method is RequestMethods.GET:
+        if method is RequestMethod.GET:
             request_method = session.get
-        elif method is RequestMethods.POST:
+        elif method is RequestMethod.POST:
             request_method = session.post
         else:
             self._logger.error("Unknown http method.")
@@ -96,7 +97,7 @@ class RequestsConnections(ac.SiteSettings):
         return request_method
         
     def _get_response(self, url: AnyHttpUrl, session: Session, 
-                      method: RequestMethods,
+                      method: RequestMethod,
                       proxy: IPvAnyAddress=None) -> typ.Union[WebPage, None]:
         '''
         Tries to get an answer. Sends an empty request. 
@@ -121,7 +122,7 @@ class RequestsConnections(ac.SiteSettings):
         return response
 
     def _get_web_page_with_proxy(self, url: AnyHttpUrl, 
-                                 method: RequestMethods) -> typ.Union[WebPage, None]:
+                                 method: RequestMethod) -> typ.Union[WebPage, None]:
         '''
         Gets a web-page through one of the proxies 
         from the corrected proxy list.
@@ -146,7 +147,7 @@ class RequestsConnections(ac.SiteSettings):
         return response.text
 
     def _get_web_page_without_proxy(self, url: AnyHttpUrl, 
-                                    method: RequestMethods) -> typ.Union[WebPage, None]:
+                                    method: RequestMethod) -> typ.Union[WebPage, None]:
         '''
         Gets a web-page without using a requests proxy.
         '''
@@ -159,8 +160,8 @@ class RequestsConnections(ac.SiteSettings):
                 
         return response.text
 
-    def get_web_page(self, type: WatchListTypes, url: AnyHttpUrl, 
-                     method: RequestMethods) -> typ.Union[WebPage, None]: 
+    def get_web_page(self, type: WatchListType, url: AnyHttpUrl, 
+                     method: RequestMethod) -> typ.Union[WebPage, None]: 
         '''
         Gets a web-page by parameters.
         '''

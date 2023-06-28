@@ -1,12 +1,13 @@
+{# required variables -- [settings, session] #}
 
-    <div class="modal fade" id="moduleSettingUpModal" 
-         tabindex="-1" aria-labelledby="moduleSettingUpModalLabel" 
+    <div class="modal fade" id="parserSettingUpModal" 
+         tabindex="-1" aria-labelledby="parserSettingUpModalLabel" 
          aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h1 class="modal-title fs-5" id="moduleSettingUpModalLabel">
-              Settings
+            <h1 class="modal-title fs-5" id="parserSettingUpModalLabel">
+              Parser settings
             </h1>
             <button type="button" class="btn-close" 
                     data-bs-dismiss="modal" aria-label="Close">
@@ -19,6 +20,12 @@
                 <select id="modulesSelect" name="modulesSelect" 
                         class="form-select" data-toggle="tooltip" 
                         title="Select the cinema module for parsing">
+                    {% for item in settings['parse_modules'] %}
+                      <option value="{{ item }}"
+                              {{ 'select' if item == session['parser']['selected_module'] else '' }}>
+                        {{ item }}
+                      </option>
+                    {% endfor %}
                 </select>
               </div>
               <div class="mb-3">
@@ -26,22 +33,102 @@
                 <textarea type="text" id="cookieInput"
                         class="form-control" name="cookieInput"
                         placeholder="Paste valid cookies for a selected module" 
-                        data-toggle="tooltip" title="Edit a cookies">
-                </textarea>
+                        data-toggle="tooltip" title="Edit a cookies"
+                        >{{ session['parser']['cookies'] }}</textarea>
               </div>
             </form>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" 
-                    data-bs-dismiss="modal">
-              Close
+            <div class="d-flex w-100">
+              <div class="align-self-start mr-auto">
+                <button type="button" class="btn btn-outline-secondary" 
+                        data-bs-dismiss="modal">
+                  Close
+                </button>
+              </div>
+              <div class="align-self-center mx-auto"></div>
+              <div class="align-self-end ml-auto">
+                <button type="button" class="btn btn-outline-primary btn-block"
+                        onclick = "settingup_submit($(this))" 
+                        id="modal_setup_button" data-bs-whatever="parser">
+                  <span class="visually-hidden spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  Login and get user data
+                </button>
+                <button class="btn btn-outline-dark" 
+                        id="modal_navigate_button" data-bs-target="#exporterSettingUpModal" 
+                        data-bs-toggle="modal" data-bs-dismiss="modal"
+                        {{'' if session['parser']['username'] else 'disabled' }}>
+                  Next step
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="modal fade" id="exporterSettingUpModal" 
+         tabindex="-1" aria-labelledby="exporterSettingUpModalLabel" 
+         aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exporterSettingUpModalLabel">
+              Exporter settings (2 of 2 steps)
+            </h1>
+            <button type="button" class="btn-close" 
+                    data-bs-dismiss="modal" aria-label="Close">
             </button>
-            <button type="button" class="btn btn-outline-primary"
-                    onclick = "settingup_submit()" 
-                    id="modal_setup_button" data-bs-whatever="parser">
-              <span class="visually-hidden spinner-border spinner-border-sm" aria-hidden="true"></span>
-              Login and get user data
-            </button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="mb-3">
+                <label for="modulesSelect" class="form-label">Target module:</label>
+                <select id="modulesSelect" name="modulesSelect" 
+                        class="form-select" data-toggle="tooltip" 
+                        title="Select the cinema module for export">
+                    {% for item in settings['export_modules'] %}
+                      <option value="{{ item }}"
+                              {{ 'select' if item == session['exporter']['selected_module'] else '' }}>
+                        {{ item }}
+                      </option>
+                    {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="cookieInput" class="form-label">Cookies:</label>
+                <textarea type="text" id="cookieInput"
+                        class="form-control" name="cookieInput"
+                        placeholder="Paste valid cookies for a selected module" 
+                        data-toggle="tooltip" title="Edit a cookies"
+                        >{{ session['exporter']['cookies'] }}</textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <div class="d-flex w-100">
+              <div class="align-self-start mr-auto">
+                <button type="button" class="btn btn-outline-secondary" 
+                        data-bs-dismiss="modal">
+                  Close
+                </button>
+              </div>
+              <div class="align-self-center mx-auto"></div>
+              <div class="align-self-end ml-auto">
+                <button type="button" class="btn btn-outline-primary"
+                        onclick = "settingup_submit($(this))" 
+                        id="modal_setup_button" data-bs-whatever="exporter">
+                  <span class="visually-hidden spinner-border spinner-border-sm" aria-hidden="true"></span>
+                  Login and get user data
+                </button>
+                <button class="btn btn-outline-dark" id="modal_navigate_button" 
+                        data-bs-target="#parserSettingUpModal" 
+                        data-bs-toggle="modal" data-bs-dismiss="modal">
+                  Prev step
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

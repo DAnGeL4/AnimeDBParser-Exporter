@@ -1,13 +1,13 @@
 const sleep = async (milliseconds) => {
     await new Promise(resolve => {
-        return setTimeout(resolve, milliseconds)
-    })
-}
+        return setTimeout(resolve, milliseconds);
+    });
+};
 
 function capitalize_str(str){
-    var res = str.substring(0, 1).toUpperCase() + str.substring(1)
-    return res
-}
+    var res = str.substring(0, 1).toUpperCase() + str.substring(1);
+    return res;
+};
 
 function send_state(){
     //get_selected_tab from action.js which is loaded after
@@ -15,7 +15,7 @@ function send_state(){
     $(window).on('beforeunload', function(event) {
         var selected_pill_id = $('#pills-tabs .active').attr('id'),
             parsed_drpdwn_id = '#parsed_dropdown_menu',
-            exported_drpdwn_id = '#exported_dropdown_menu',
+            exported_drpdwn_id = '#exported_dropdown_menu';
             
         _ = $.ajax({
             type: 'POST',
@@ -26,6 +26,6 @@ function send_state(){
                 selected_parsed_tab: get_selected_tab(parsed_drpdwn_id),        //!
                 selected_exported_tab: get_selected_tab(exported_drpdwn_id)     //!
             }
-        })
-    })
-}
+        });
+    });
+};

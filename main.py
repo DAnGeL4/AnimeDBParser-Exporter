@@ -1,14 +1,12 @@
 #--Start imports block
 #System imports
-import os
 import functools
 import typing as typ
 
 #Custom imports
-from configs.connected_modules import EnabledModules
-from configs.connected_modules import ModuleAnimeBuffRu, ModuleAnimeGoOrg
-from modules.general.tools import OutputLogger
-from modules.general.main_tools import MainService
+from lib.tools import OutputLogger
+from modules.common.main_service import MainService
+import modules.flask.application as _flask
 #--Finish imports block
 
 
@@ -18,8 +16,8 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
     
     @functools.wraps(redirected_function)
     def wrapper(*args, **kwargs):
-        redir_out = OutputLogger(duplicate=True, name="main")
-        logger = redir_out.logger
+        m_serv = MainService()
+        logger = m_serv.logger
         
         logger.info("STARTED...\n")
         logger.info("-----\n")
@@ -38,23 +36,17 @@ def basic_output(redirected_function: typ.Callable) -> typ.Callable:
 @basic_output
 def main() -> typ.NoReturn:
     '''Entry point.'''
-
-    #user select
-    #temporary solution
-    selected_modules = dict({
-        EnabledModules.parse.name: ModuleAnimeBuffRu(
-            cookies=os.environ['animebuff_session_value']
-        ),
-        EnabledModules.export.name: ModuleAnimeGoOrg(
-            cookies=os.environ['animego_REMEMBERME']
-        )
-    })
-    selected_action = EnabledModules.export
-    #----
-
     m_serv = MainService()
-    _ = m_serv.processing_for_selected_module(selected_modules, 
-                                              selected_action)
+    if not m_serv.prepare_redis_server(): 
+        m_serv.logger.error('The Redis server is not running.')
+        return
+        
+    if not m_serv.prepare_celery_worker():
+        m_serv.logger.error('The Celery worker is not running.')
+        return
+    
+    _ = m_serv.prepare_modules_proxies()
+    _ = _flask.run_app()
     
     return
         
@@ -63,5 +55,5 @@ def main() -> typ.NoReturn:
     
 #--Start run block
 OutputLogger.base_configure_logging()
-main()
+_ = main()
 #--Finish run block
