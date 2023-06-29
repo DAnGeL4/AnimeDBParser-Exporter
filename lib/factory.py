@@ -8,7 +8,7 @@ from flask import Flask
 from flask_session import Session
 from flask_caching import Cache
 from celery import Celery
-from collections import Iterable
+from collections.abc import Iterable
 from pydantic import AnyHttpUrl
 
 #Custom imports
