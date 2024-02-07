@@ -1,5 +1,8 @@
 { pkgs }: {
   deps = [
+    pkgs.zlib
+    pkgs.xcodebuild
+    pkgs.libxcrypt
     pkgs.redis
     pkgs.python310Full
     pkgs.replitPackages.prybar-python310
