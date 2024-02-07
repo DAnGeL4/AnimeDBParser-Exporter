@@ -50,12 +50,12 @@ RESTART_CELERY_WORKERS: bool = bool(
     True
 )
 CELERY_USE_PICKLE_SERIALIZER = bool(
-    True
     #False
+    True
 )
 USE_DATABASE = bool(
-    #True
     False
+    #True
 )
 #---
 
@@ -70,6 +70,9 @@ FLASK_CACHE_TIME_TO_LIVE = FLASK_TIME_TO_LIVE
 FLASK_SESSION_TYPE = 'filesystem'
 FLASK_CACHE_TYPE = 'filesystem'
 TITLES_DUMP_KEY_ERRORS = 'errors'
+REDIS_DB = 0
+REDIS_TITLES_DUMPS_STORE_KEY = "user_titles_dumps"
+PROXY_CHECK_TIMEOUT = 4
 #---
 
 # Web Protocols
@@ -88,6 +91,13 @@ REQUEST_PROXIES_FORMAT: typ.Dict[Protocol, AnyHttpUrl] = {
 #---
 CELERY_BROKER_URL: AnyHttpUrl = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND: AnyHttpUrl = 'redis://localhost:6379'
+REDIS_HOST = os.environ['redis_host']
+REDIS_PORT = os.environ['redis_port']
+#---
+
+# Authoization data
+#---
+REDIS_PASSWORD = os.environ['redis_password']
 #---
 
 # Files and Directories

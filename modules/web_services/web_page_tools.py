@@ -272,7 +272,7 @@ class WebPageParser(IWebPageParser):
 
     def _is_update_needed(self, anime_key: str) -> bool:
         '''Check the need to update the json dump.'''
-        if anime_key in self._data[self._type.value]:
+        if anime_key in self._data[self._type.value].keys():
             self._logger.info("...record already exists...")
             if not UPDATE_JSON_DUMPS:
                 self._logger.info("...canceled. Updates are not needed.\n")

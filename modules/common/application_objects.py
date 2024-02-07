@@ -1,5 +1,6 @@
 #--Start imports block
 #System imports
+from redis import Redis
 from flask import Flask
 from flask_session import Session
 from flask_caching import Cache
@@ -12,7 +13,8 @@ from configs.settings import (
     FLASK_SESSION_TYPE, FLASK_SESSION_TIME_TO_LIVE,
     FLASK_CACHE_TYPE, FLASK_CACHE_TIME_TO_LIVE,
     CELERY_RESULT_BACKEND, CELERY_BROKER_URL, 
-    CELERY_USE_PICKLE_SERIALIZER
+    CELERY_USE_PICKLE_SERIALIZER, 
+    REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_DB
 )
 from lib.factory import FlaskFactory, CeleryFactory
 #--Finish imports block
@@ -37,4 +39,10 @@ celery: Celery = CeleryFactory.make_celery(
 )
 flask_sess: Session = FlaskFactory.make_flask_session(flask_app)
 flask_cache: Cache = FlaskFactory.make_flask_cache(flask_app)
+redis: Redis = Redis(host=REDIS_HOST, 
+    port=REDIS_PORT, 
+    password=REDIS_PASSWORD,
+    db=REDIS_DB, 
+    decode_responses=True
+)
 #--Finish global constants block

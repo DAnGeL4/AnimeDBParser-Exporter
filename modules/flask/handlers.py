@@ -2,20 +2,24 @@
 #System imports
 import os
 import json
+import logging
 import typing as typ
 import multiprocessing as mp
 from pathlib import Path
+from redis.commands.json import JSON as RedisJSON
+from redis.commands.json.path import Path as RedisJSONPath
 
 #Custom imports
-from configs.settings import JSON_DUMPS_DIR
+from configs.settings import JSON_DUMPS_DIR, REDIS_TITLES_DUMPS_STORE_KEY
 from lib.types import (
     WatchListType, ServerAction, EnabledDataHandler,
     TitlesProgressStatus, TitlesProgressStatusCurrent,
-    EnabledProgressHandler, 
+    EnabledProgressHandler,
     DEFAULT_PROGRESS_HANDLER, DEFAULT_DATA_HANDLER
 )
 from lib.interfaces import IDataHandler, IProgressHandler
 from lib.tools import OutputLogger
+from modules.common.application_objects import redis
 #--Finish imports block
 
 
@@ -35,20 +39,20 @@ class JSONDataHandler(IDataHandler):
                  logger_suffix: str = '', queue: mp.Queue = None, **kwargs):
         arg_dump_name = 'dump_file_name'
         assert arg_dump_name in kwargs, f"Missing '{arg_dump_name}' argument."
-                     
+
         _ = super().__init__(dict(data))
-                     
+
         _logger_name = "json_handler"
         if logger_suffix:
             _logger_name += "_" + logger_suffix
-                     
+
         self._module_name = module_name
         self._dump_file_name = kwargs[arg_dump_name]
         self._logger = OutputLogger(duplicate=True,
                                     queue=queue,
                                     name=_logger_name
                                    ).logger
-        
+
     def _load_json_data(self) -> typ.Dict[str, typ.Any]:
         '''
         Loads JSON data from a file for a specific module.
@@ -97,7 +101,7 @@ class JSONDataHandler(IDataHandler):
         self._logger.success("...saved.")
         return True
 
-    def load_data(self, *args, **kwargs):
+    def load_data(self, *args, **kwargs) -> typ.NoReturn:
         '''
         Loads data from the json file.
         '''
@@ -106,13 +110,13 @@ class JSONDataHandler(IDataHandler):
         _ = self.clear()
         _ = self.update(dict(json_data))
 
-    def prepare_data(self, *args, **kwargs):
+    def prepare_data(self, *args, **kwargs) -> typ.NoReturn:
         '''
         Prepares json data.
         '''
         _ = self._prepare_json_data(*args, **kwargs)
 
-    def save_data(self, *args, **kwargs):
+    def save_data(self, *args, **kwargs) -> bool:
         '''
         Stores data in the destination json file.
         '''
@@ -193,11 +197,248 @@ class CacheDataHandler(IDataHandler):
 
     def __unicode__(self):
         return repr(self.__dict__)
-        
 
 
-class RedisDataHndler:
-    pass
+class RedisJSONDataHandler(IDataHandler):
+    '''
+    Contains methods for working with data
+    in Redis JSON format.
+    Note: using handler['key.key'] faster than handler['key']['key'] 
+    (1 vs 2 & more calls to redisdb).
+    '''
+
+    _module_name: str = None
+    _logger: logging.Logger = None
+    _top_level_key: str = None
+    _current_key: RedisJSONPath = None
+    _redis_store: RedisJSON = None
+
+    def __init__(self, data: dict = {}, module_name: str = '', 
+                 logger_suffix: str = '', queue: mp.Queue = None, **kwargs):
+        self._module_name = module_name
+        _ = self._set_logger(logger_suffix, queue, **kwargs)
+        _ = self._set_redis_store(**kwargs)
+        _ = self._set_top_level_key(**kwargs)
+        _ = self._set_current_key(**kwargs)
+
+        if data:
+            _ = self._redis_store.set(
+                self._top_level_key, self._current_key, data)
+
+    def _set_logger(self, logger_suffix: str, 
+                    queue: mp.Queue, **kwargs) -> typ.NoReturn:
+        '''Sets logger for the handler.'''
+        _logger = kwargs.get('logger', None)
+        if not _logger:
+            _logger_name = "redis_handler"
+            if logger_suffix:
+                _logger_name += "_" + logger_suffix
+
+            _logger = OutputLogger(duplicate=True, queue=queue,
+                                   name=_logger_name).logger
+
+        self._logger = _logger
+
+    def _сompose_top_level_key(self, **kwargs) -> str:
+        '''
+        Composes the top level key for the Redis JSON path 
+        from dump file name.
+        '''
+        arg_dump_name = 'dump_file_name'
+        assert arg_dump_name in kwargs, f"Missing '{arg_dump_name}' argument."
+
+        dump_file_path = kwargs.get(arg_dump_name)
+        file_name = dump_file_path.split('/')[-1]
+        user_module = file_name.split('.')[0]
+        return f"{REDIS_TITLES_DUMPS_STORE_KEY}:{user_module}"
+
+    def _top_level_key_exists(self) -> bool:
+        '''
+        Checks if the top level key exists in RedisDB.
+        '''
+        root_path = RedisJSONPath(RedisJSONPath.root_path())
+        answ = self._redis_store.get(self._top_level_key, root_path)
+        res = True
+        if not answ:
+            res = False
+        return res
+
+    def _set_top_level_key(self, **kwargs) -> None:
+        '''
+        Sets the top level key as the Redis JSON path.
+        '''
+        self._top_level_key = kwargs.get('top_level_key', None)
+        if not self._top_level_key:
+            self._top_level_key = self._сompose_top_level_key(**kwargs)
+
+        if not self._top_level_key_exists():
+            root_path = RedisJSONPath(RedisJSONPath.root_path())
+            self._redis_store.set(self._top_level_key, root_path, {})
+
+    def _set_redis_store(self, **kwargs) -> None:
+        '''
+        Sets the redis store for working with the dumps.
+        '''
+        self._redis_store = kwargs.get("store", None)
+        if self._redis_store is None:
+            self._redis_store = redis.json()
+            _ = self._set_current_key(**kwargs)
+
+    def _set_current_key(self, **kwargs) -> None:
+        '''
+        Sets the current key as the Redis JSON path.
+        '''
+        current_key: RedisJSONPath = kwargs.get("current_key", None)
+        if current_key:
+            assert type(current_key) is RedisJSONPath, \
+                "Invalid type of 'current_key' argument."
+            self._current_key = current_key
+
+        elif self._current_key is None:
+            self._current_key = RedisJSONPath(RedisJSONPath.root_path())
+
+    def _json_key_type_array(self, key: RedisJSONPath = None) -> bool:
+        '''
+        Checks if the key is an array.
+        '''
+        key = self._current_key if key is None else key
+        json_key_type = self._redis_store.type(
+                self._top_level_key, key)
+
+        res = True if json_key_type == 'array' else False
+        return res
+
+    def _compose_redis_json_key(self, key: RedisJSONPath, 
+                                check_type: bool = True) -> RedisJSONPath:
+        '''
+        Composes the Redis JSON path key for several types.
+        '''
+        if check_type and self._json_key_type_array():
+            assert type(key) is int, "Type of 'key' argument must be 'int'."
+            key = RedisJSONPath(f"{self._current_key.strPath}[{key}]")
+        elif self._current_key.strPath == RedisJSONPath.root_path():
+            key = RedisJSONPath(f"{self._current_key.strPath}{key}")
+        else:
+            key = RedisJSONPath(f"{self._current_key.strPath}.{key}")
+        return key
+
+    def __getitem__(self, key):
+        key = self._compose_redis_json_key(key)
+        value = self._redis_store.get(self._top_level_key, key)
+        value = self.__class__(store=self._redis_store, 
+                               top_level_key=self._top_level_key, 
+                               current_key=key)
+        return value
+
+    def __setitem__(self, key, value):
+        key = self._compose_redis_json_key(key)
+        _ = self._redis_store.set(self._top_level_key, key, value)
+
+    def __repr__(self):
+        current_key = self._redis_store.get(
+            self._top_level_key, self._current_key)
+        return repr(current_key)
+
+    def __len__(self):
+        keys_count = -1
+        if self._json_key_type_array():
+            keys_count = self._redis_store.arrlen(
+                self._top_level_key, self._current_key)
+        else:
+            keys_count = self._redis_store.objlen(
+                self._top_level_key, self._current_key)
+        return keys_count
+
+    def __delitem__(self, key):
+        key = self._compose_redis_json_key(key)
+        _ = self._redis_store.delete(self._top_level_key, key)
+
+    def clear(self):
+        res = self._redis_store.clear(
+            self._top_level_key, self._current_key)
+        return res
+
+    def copy(self):
+        raise NotImplementedError
+
+    def has_key(self, key):
+        keys = self.keys()
+        return key in keys
+
+    def update(self, *args, **kwargs):
+        if len(args) > 1:
+            raise TypeError("TypeError: update expected "\
+                            "at most 1 argument, got 2")
+
+        args_dict = args[0] if args else {}
+        merged_dict = {**args_dict, **kwargs}
+        #JSON.MERGE not availible in RedisJSON version < 2.6.0
+        #res = self._redis_store.merge(
+        #    self._top_level_key, self._current_key, merged_dict)
+
+        res = True
+        for key, value in merged_dict.items():
+            key = self._compose_redis_json_key(key, check_type=False)
+            tmp_res = self._redis_store.set(self._top_level_key, key, value)
+            res = False if not tmp_res else res
+        return res
+
+    def keys(self):
+        keys = self._redis_store.objkeys(
+            self._top_level_key, self._current_key)
+        return keys
+
+    def values(self):
+        raise NotImplementedError
+
+    def items(self):
+        raise NotImplementedError
+
+    def pop(self, *args):
+        raise NotImplementedError
+
+    def __cmp__(self, dict_):
+        raise NotImplementedError
+
+    def __contains__(self, key):
+        return self.has_key(key)
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __unicode__(self):
+        current_key = self._redis_store.get(
+            self._top_level_key, self._current_key)
+        return repr(current_key)
+
+    def _prepare_data_for_redis(self, type_: str) -> typ.NoReturn:
+        '''
+        Prepares data into a valid format for Redis storage.
+        '''
+        key = type_.value if hasattr(type_, 'value') else type_
+        if not key in self:
+            self[key] = dict()
+
+    def prepare_data(self, *args, **kwargs) -> typ.NoReturn:
+        '''
+        Prepares data for saving to Redis based on the arguments passed.
+        '''
+        _ = self.clear()
+        _ = self._prepare_data_for_redis(*args, **kwargs)
+
+    def load_data(self, *args, **kwargs) -> typ.NoReturn:
+        '''
+        Loads data from Redis based on the arguments passed.
+        '''
+        #Implementation unused
+        pass
+
+    def save_data(self, *args, **kwargs) -> typ.NoReturn:
+        '''
+        Saves data to Redis based on the arguments passed.
+        '''
+        #Implementation unused
+        pass
 
 
 class CacheProgressHandler(IProgressHandler):
@@ -285,7 +526,7 @@ class CacheProgressHandler(IProgressHandler):
 DataHandlersCompatibility: typ.Dict[EnabledDataHandler, IDataHandler] = {
     EnabledDataHandler.JSON: JSONDataHandler,
     EnabledDataHandler.CACHE: CacheDataHandler,
-    EnabledDataHandler.REDIS: RedisDataHndler
+    EnabledDataHandler.REDIS: RedisJSONDataHandler
 }
 ProgressHandlersCompatibility: \
             typ.Dict[EnabledProgressHandler, IProgressHandler] = {
