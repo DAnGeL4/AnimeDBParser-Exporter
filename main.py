@@ -44,7 +44,8 @@ def main() -> typ.NoReturn:
     if not m_serv.prepare_celery_worker():
         m_serv.logger.error('The Celery worker is not running.')
         return
-    
+
+    _ = m_serv.initial_proxy_check()
     _ = m_serv.prepare_modules_proxies()
     _ = _flask.run_app()
     

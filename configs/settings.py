@@ -14,12 +14,12 @@ from pathlib import Path
 # Flags
 #---
 DOWNLOAD_PROXY_LISTS: bool = bool(
-    False
-    #True
+    #False
+    True
 )
 CHECK_PROXIES: bool = bool(
-    False
-    #True
+    #False
+    True
 )
 WRITE_LOG_TO_FILE: bool = bool(
     #False
@@ -57,6 +57,10 @@ USE_DATABASE = bool(
     False
     #True
 )
+PB2_FIND_PROXY = bool(
+    False
+    #True
+)
 #---
 
 # Common constants
@@ -73,13 +77,17 @@ TITLES_DUMP_KEY_ERRORS = 'errors'
 REDIS_DB = 0
 REDIS_TITLES_DUMPS_STORE_KEY = "user_titles_dumps"
 PROXY_CHECK_TIMEOUT = 4
+PB2_MAX_TRIES = 1
+PB2_PROXIES_LIMIT = 1500
 #---
 
 # Web Protocols
 #---
 PROXY_PROTOCOLS: typ.Dict[str, Protocol] = dict({
     "socks4": "socks4",
-    "socks5": "socks5"
+    "socks5": "socks5",
+    "http": "http",
+    "https": "https"
 })
 REQUEST_PROXIES_FORMAT: typ.Dict[Protocol, AnyHttpUrl] = {
     "http": None,  #used socks proxy
@@ -123,6 +131,8 @@ COMMON_BASH_LOG_FILE: Path = os.path.join(GLOBAL_LOG_DIR, "bash.log")
 LOCAL_PROXY_FILES: typ.Dict[Protocol, str] = dict({
     PROXY_PROTOCOLS["socks4"]: "proxy_socks4",
     PROXY_PROTOCOLS["socks5"]: "proxy_socks5",
+    PROXY_PROTOCOLS["http"]: "proxy_http",
+    PROXY_PROTOCOLS["https"]: "proxy_https"
 })
 #---
 
@@ -133,6 +143,10 @@ ONLINE_PROXY_LISTS: typ.Dict[str, HttpUrl] = dict({
     "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt",
     LOCAL_PROXY_FILES[PROXY_PROTOCOLS["socks5"]]:
     "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
+    LOCAL_PROXY_FILES[PROXY_PROTOCOLS["http"]]:
+    "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/http.txt",
+    LOCAL_PROXY_FILES[PROXY_PROTOCOLS["https"]]:
+    "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/https.txt"
 })
 #---
 

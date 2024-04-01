@@ -30,8 +30,8 @@ class MainService:
     
     def prepare_modules_proxies(self) -> typ.NoReturn:
         '''
-        Performs an initial proxy check 
-        for enabled modules for allowed actions.
+        Performs an proxy check 
+        by enabled modules for allowed actions.
         '''
         for modules_by_action in EnabledModules:
             action = ServerAction(modules_by_action.name)
@@ -47,7 +47,7 @@ class MainService:
                                  f"{module.module_name}.")
                 
                 prx_chk = ProxyChecker(module.module_name)
-                _ = prx_chk.prepare_proxy_lists(
+                _ = prx_chk.check_proxy_lists_by_modules(
                             module.config_module.url_general)
                 
                 self.logger.info("Preparing for module - " \
@@ -55,14 +55,23 @@ class MainService:
                 
             self.logger.info(f"Finished preparing for {action.name} modules.\n")
 
-    def is_setup_done(self, res: str) -> bool:
+    def initial_proxy_check(self) -> typ.NoReturn:
+        '''Performs an initial proxy check.'''
+        self.logger.info("Started initial proxy check.\n")
+        prx_chk = ProxyChecker(module_name='')
+        _ = prx_chk.prepare_proxy_lists()
+        self.logger.info("Finished initial proxy check.\n")
+
+    def _is_setup_done(self, res: str) -> bool:
         '''
-        Checks if a bash script returns Done.
+        Checks if a bash script returns 'Done'.
         '''
+        answ = True
         if res != "DONE": 
             self.logger.error("ERROR. Failed to start service.")
-            return False
-        return True
+            answ = False
+            
+        return answ
     
     def run_setup_script(self, setup_file: Path, args: typ.List[typ.Any]) -> bool:
         '''
@@ -77,7 +86,7 @@ class MainService:
             self.logger.info(answer)
     
         res = answers[-2].split(' ')[-1]
-        return self.is_setup_done(res)
+        return self._is_setup_done(res)
     
     def prepare_redis_server(self):
         '''
