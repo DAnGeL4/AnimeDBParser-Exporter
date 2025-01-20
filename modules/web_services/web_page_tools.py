@@ -15,7 +15,7 @@ from configs.settings import (
     WEB_PAGES_DIR, RELOAD_WEB_PAGES, USE_MULTITHREADS,
     UPDATE_JSON_DUMPS, TITLES_DUMP_KEY_ERRORS
 )
-from lib.types import (
+from lib.custom_types import (
     WatchListType, WebPage, RequestMethod, AnimeInfoType
 )
 from lib.interfaces import (

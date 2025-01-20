@@ -15,7 +15,7 @@ from configs.settings import (
     WRITE_LOG_TO_FILE, GLOBAL_LOG_FILE,
     ENABLE_PARSING_MODULES, ENABLE_EXPORTER_MODULES
 )
-from .types import ServerAction
+from .custom_types import ServerAction
 #--Finish imports block
 
 

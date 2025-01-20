@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from pydantic import AnyHttpUrl
 
 #Custom imports
-from lib.types import WebPage, AnimeType, AnimeStatus, LinkedAnimeInfoType
+from lib.custom_types import WebPage, AnimeType, AnimeStatus, LinkedAnimeInfoType
 from lib.interfaces import IWebPageParser
 from lib.tools import OutputLogger
 #--Finish imports block

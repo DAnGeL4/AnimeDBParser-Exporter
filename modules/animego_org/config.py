@@ -7,7 +7,7 @@ from requests.structures import CaseInsensitiveDict
 
 #Custom imports
 from configs.settings import REQUEST_PROXIES_FORMAT
-from lib.types import Cookies, JSON, WebPage, WatchListType
+from lib.custom_types import Cookies, JSON, WebPage, WatchListType
 from lib.interfaces import ISiteSettings
 #--Finish imports block
 

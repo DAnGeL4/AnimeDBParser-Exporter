@@ -4,7 +4,7 @@ import typing as typ
 from flask import jsonify
 
 #Custom imports
-from lib.types import (
+from lib.custom_types import (
     WebPage, JSON, ResponseStatus, 
     AjaxCommand, AjaxServerResponse, ActionModule
 )

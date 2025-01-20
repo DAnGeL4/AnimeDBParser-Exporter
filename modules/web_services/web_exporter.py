@@ -11,7 +11,7 @@ from logging import Logger
 
 #Custom imports
 from configs.settings import USE_MULTITHREADS, TITLES_DUMP_KEY_ERRORS
-from lib.types import (
+from lib.custom_types import (
     RequestMethod, WebPage,
     AnimeInfoType, LinkedAnimeInfoType, AnimeByWatchList,
     TitleDump, WatchListType, TitleDumpByKey
@@ -90,7 +90,7 @@ class TitleExporter:
     
     def compare_titles(self, query_title: AnimeInfoType, 
                        finded_title: LinkedAnimeInfoType) -> bool:
-        '''Compares two titles of similar types.'''
+        '''Compares two titles of similar custom_types.'''
         if query_title.original_name != finded_title.original_name and \
                            query_title.name != finded_title.name:
             if finded_title.original_name not in query_title.other_names and \

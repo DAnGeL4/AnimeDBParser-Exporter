@@ -12,7 +12,7 @@ from requests.structures import CaseInsensitiveDict
 from logging import Logger
 
 #Custom imports
-from .types import (
+from .custom_types import (
     WebPage, LinkedAnimeInfoType, WatchListType, 
     JSON, Cookies, ServerAction, TitlesProgressStatus
 )

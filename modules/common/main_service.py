@@ -10,7 +10,7 @@ from configs.settings import (
     CELERY_SETUP_SH_FILE, CELERY_TASKS_MODULE, 
     RESTART_CELERY_WORKERS
 )
-from lib.types import ServerAction
+from lib.custom_types import ServerAction
 from lib.proxy_checker import ProxyChecker
 from lib.tools import OutputLogger, is_allowed_action
 from .connected_modules import EnabledModules

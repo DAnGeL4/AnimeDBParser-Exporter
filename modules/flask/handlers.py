@@ -11,7 +11,7 @@ from redis.commands.json.path import Path as RedisJSONPath
 
 #Custom imports
 from configs.settings import JSON_DUMPS_DIR, REDIS_TITLES_DUMPS_STORE_KEY
-from lib.types import (
+from lib.custom_types import (
     WatchListType, ServerAction, EnabledDataHandler,
     TitlesProgressStatus, TitlesProgressStatusCurrent,
     EnabledProgressHandler,

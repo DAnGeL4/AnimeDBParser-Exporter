@@ -9,7 +9,7 @@ from flask_caching import Cache
 
 #Custom imports
 from configs.settings import TEMPLATES_DIR
-from lib.types import (
+from lib.custom_types import (
     ServerAction, AjaxServerResponse, ActionModule,
     ActionToModuleCompatibility, AjaxCommand, ResponseStatus,
     WatchListType, AnimeByWatchList, Session, Cookies, 

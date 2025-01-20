@@ -3,7 +3,7 @@
 from enum import Enum
 
 #Custom imports
-from lib.types import ServerAction
+from lib.custom_types import ServerAction
 from lib.interfaces import IConnectedModule
 
 from modules.animebuff_ru.config import AnimeBuffRuConfig

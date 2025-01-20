@@ -1,12 +1,13 @@
 #--Start imports block
 #System imports
-import requests
-import cfscrape
-import typing as typ
 from enum import Enum
+import typing as typ
 import dataclasses as dcls
 from pydantic import AnyHttpUrl
-from flask_session import Session
+
+import requests
+from cfscrape import CloudflareScraper
+from flask_session import Session as FlaskSession
 from celery import Task as CeleryTask
 
 #Custom imports
@@ -18,7 +19,7 @@ from .factory import DataclassTypeFactory
 tp_fc = DataclassTypeFactory()
 
 Response = requests.models.Response
-Session = typ.Union[cfscrape.CloudflareScraper, Session]
+Session = typ.Union[CloudflareScraper, FlaskSession]
 WebPage = Response
 WebPagePart = Response
 HTMLTemplate = typ.Union[WebPage, WebPagePart]
@@ -116,10 +117,16 @@ class AjaxServerResponse:
     Server response data type 
     for jQuery ajax.
     '''
-    status: ResponseStatus = ResponseStatus.EMPTY
-    msg: HTMLTemplate = str()
-    title_tmpl: HTMLTemplate = str()
-    statusbar_tmpl: HTMLTemplate = str()
+    status: ResponseStatus
+    msg: HTMLTemplate
+    title_tmpl: HTMLTemplate
+    statusbar_tmpl: HTMLTemplate
+
+    def __post_init__(self):
+        self.status = ResponseStatus.EMPTY
+        self.msg = str()
+        self.title_tmpl = str()
+        self.statusbar_tmpl = str()
 
     def asdict(self):
         return {
@@ -182,8 +189,12 @@ class ITitlesProgressStatusCommon:
     '''
     Stores the state of the titles processing progress.
     '''
-    now: int = 0
-    max: int = 0
+    now: int 
+    max: int 
+    
+    def __post_init__(self):
+        self.now = 0
+        self.max = 0
     
 @dcls.dataclass
 class TitlesProgressStatusAll(ITitlesProgressStatusCommon):
@@ -200,8 +211,10 @@ class TitlesProgressStatusCurrent(ITitlesProgressStatusCommon):
     Stores the progress status of titles 
     for the current watchlist.
     '''
-    watchlist: WatchListType = ''
+    watchlist: WatchListType
 
+    def __post_init__(self):
+        self.watchlist = ''
 
 @dcls.dataclass
 class TitlesProgressStatus:
@@ -209,9 +222,14 @@ class TitlesProgressStatus:
     Container-type to store the progress state 
     of a running server action.
     '''
-    status: bool = False
-    all: TitlesProgressStatusAll = TitlesProgressStatusAll()
-    current: TitlesProgressStatusCurrent = TitlesProgressStatusCurrent()
+    status: bool
+    all: TitlesProgressStatusAll
+    current: TitlesProgressStatusCurrent
+    
+    def __post_init__(self):
+        self.status = False
+        self.all = TitlesProgressStatusAll()
+        self.current = TitlesProgressStatusCurrent()
     
     def asdict(self):
         return {k: v for k, v in dcls.asdict(self).items()}
