@@ -1,11 +1,12 @@
 [tool.poetry]
-name = "python-template"
-version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+package-mode = false
+name = "CinemaDBParser-Exporter"
+version = "0.5.1"
+description = "Web tool for exporting/importing title (media) lists between web platforms."
+authors = ["DAnGeL4 <Lazukad@mail.ru>"]
 
 [tool.poetry.dependencies]
-python = ">=3.10.0,<3.11"
+python = "^3.12"
 numpy = "^1.22.2"
 replit = "^3.2.4"
 Flask = "^2.2.0"
