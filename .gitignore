@@ -138,9 +138,10 @@ cython_debug/
 
 #Custom files
 .breakpoints
-poetry.lock
+
 flask_session/
-/configs/redis.conf
+
 trash
 
-.local
+# Poetry
+poetry.lock
