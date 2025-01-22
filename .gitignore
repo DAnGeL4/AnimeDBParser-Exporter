@@ -145,3 +145,6 @@ trash
 
 # Poetry
 poetry.lock
+
+# Redis configuration
+configs/redis.conf
