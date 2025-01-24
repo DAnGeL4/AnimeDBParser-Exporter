@@ -1,13 +1,5 @@
 #!/bin/bash
 
-#--System detection
-OS_ID=$(grep -oP '(?<=^ID_LIKE=).+' /etc/os-release | tr -d '"')
-
-if [[ ! "$OS_ID" =~ ^(debian|arch)$ ]]; then
-    echo "Error: Unsupported operating system. (ID_LIKE: $OS_ID)"
-    exit 1
-fi
-
 #--Helper functions
 check_if_install_package() {
     local REQUIRED_PKG=$1
@@ -137,15 +129,52 @@ setup_poetry() {
     fi
 }
 
+setup_environment() {
+    echo -e "\nSetting up environment variables:"
+    echo "Generating Flask Secret Key..."
+    flask_secret_key=$(openssl rand -hex 32)
+    echo "Generated key: $flask_secret_key"
+    read -p "Enter Redis Host [localhost]: " redis_host
+    redis_host=${redis_host:-localhost}
+    read -p "Enter Redis Port [6379]: " redis_port
+    redis_port=${redis_port:-6379}
+    read -sp "Enter Redis Password: " redis_password
+    echo
+
+    # Adding variables to the activate script
+    cat >> "$ACTIVATE_SCRIPT" << EOF
+
+# Project environment variables
+export FLASK_SECRET_KEY="$flask_secret_key"
+export REDIS_HOST="$redis_host"
+export REDIS_PORT="$redis_port"
+export REDIS_PASSWORD="$redis_password"
+EOF
+
+    echo -e "\nEnvironment variables have been set."
+}
+
+
+#--System detection
+OS_ID=$(grep -oP '(?<=^ID_LIKE=).+' /etc/os-release | tr -d '"')
+if [[ ! "$OS_ID" =~ ^(debian|arch)$ ]]; then
+    echo "Error: Unsupported operating system. (ID_LIKE: $OS_ID)"
+    exit 1
+fi
+
+#--Poetry environment
+ACTIVATE_SCRIPT="$(poetry env info --path)/bin/activate"
+
 #--Main execution
 setup_redis
 setup_poetry
+setup_environment
 
 echo -e "\nInstalling project dependencies..."
 poetry install --no-root --sync
 
 echo -e "\nActivating virtual environment..."
-eval $(poetry env activate) || {
+source "$ACTIVATE_SCRIPT" || {
     echo "Failed to activate virtual environment"
     exit 1
 }

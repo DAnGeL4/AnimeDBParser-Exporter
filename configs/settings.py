@@ -99,13 +99,14 @@ REQUEST_PROXIES_FORMAT: typ.Dict[Protocol, AnyHttpUrl] = {
 #---
 CELERY_BROKER_URL: AnyHttpUrl = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND: AnyHttpUrl = 'redis://localhost:6379'
-REDIS_HOST = os.environ['redis_host']
-REDIS_PORT = os.environ['redis_port']
+REDIS_HOST = os.environ['REDIS_HOST']
+REDIS_PORT = os.environ['REDIS_PORT']
 #---
 
 # Authoization data
 #---
-REDIS_PASSWORD = os.environ['redis_password']
+REDIS_PASSWORD = os.environ['REDIS_PASSWORD']
+FLASK_SECRET_KEY = os.environ['FLASK_SECRET_KEY']
 #---
 
 # Files and Directories

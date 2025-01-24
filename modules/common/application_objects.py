@@ -9,11 +9,11 @@ from celery import Celery
 #Custom imports
 from configs.settings import (
     FLASK_SESSION_FILE_DIR, FLASK_CACHE_DIR, 
-    FLASK_APPLICATION_NAME, FLASK_SESSION_FILE_THRESHOLD,
-    FLASK_SESSION_TYPE, FLASK_SESSION_TIME_TO_LIVE,
-    FLASK_CACHE_TYPE, FLASK_CACHE_TIME_TO_LIVE,
-    CELERY_RESULT_BACKEND, CELERY_BROKER_URL, 
-    CELERY_USE_PICKLE_SERIALIZER, 
+    FLASK_APPLICATION_NAME, FLASK_SECRET_KEY, 
+    FLASK_SESSION_FILE_THRESHOLD, FLASK_SESSION_TYPE, 
+    FLASK_SESSION_TIME_TO_LIVE, FLASK_CACHE_TYPE, 
+    FLASK_CACHE_TIME_TO_LIVE, CELERY_RESULT_BACKEND, 
+    CELERY_BROKER_URL, CELERY_USE_PICKLE_SERIALIZER, 
     REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_DB
 )
 from lib.factory import FlaskFactory, CeleryFactory
@@ -23,6 +23,7 @@ from lib.factory import FlaskFactory, CeleryFactory
 #--Start global constants block
 flask_app: Flask = FlaskFactory.make_flask_application(
     name=FLASK_APPLICATION_NAME,
+    flask_secret_key=FLASK_SECRET_KEY,
     session_type=FLASK_SESSION_TYPE,
     session_dir=FLASK_SESSION_FILE_DIR,
     session_ttl=FLASK_SESSION_TIME_TO_LIVE,

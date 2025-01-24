@@ -106,6 +106,7 @@ class FlaskFactory:
     @classmethod
     def make_flask_application(cls, 
                                 name: str, 
+                                flask_secret_key: str,
                                 session_type: str, 
                                 session_dir: Path, 
                                 session_ttl: int,
@@ -117,7 +118,7 @@ class FlaskFactory:
         Initializes the Flask application.
         '''
         application = Flask(name)
-        application.config.update(SECRET_KEY=os.environ['flask_secret_key'],
+        application.config.update(SECRET_KEY=flask_secret_key,
                                   SESSION_TYPE=session_type,
                                   SESSION_FILE_DIR=session_dir,
                                   SESSION_PERMANENT=True,
